@@ -1,0 +1,14 @@
+{
+  "name": "commands-api",
+  "version": "1.0.0",
+  "description": "Rest API for command line tools",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "David Fernandez",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.13.3"
+  }
+}
