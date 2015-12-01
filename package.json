@@ -9,7 +9,9 @@
   "author": "David Fernandez",
   "license": "MIT",
   "dependencies": {
+    "body-parser": "^1.14.1",
     "express": "^4.13.3",
-    "body-parser": "1.14.1"
+    "lodash": "^3.10.1",
+    "shelljs": "^0.5.3"
   }
 }
