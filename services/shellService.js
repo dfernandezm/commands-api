@@ -1,24 +1,38 @@
 require('shelljs/global');
+var StatusMessage = require('../util/StatusMessage');
+var CommandStatus = require('../util/CommandStatus');
 
-module.exports = {
-
+shellService = {
     checkExecutable: function(executablePath) {
-      var message = "";
+      var statusMessage = new StatusMessage();
       if (!which(executablePath)) {
-        message = 'Sorry, this script requires ' + executablePath;
-        echo(message);
-        return { error: message, status: "ERROR" };
+        statusMessage.message = 'Sorry, this script requires ' + executablePath;
+        statusMessage.status = CommandStatus.ERROR;
       } else {
-        message = "The executable " + executablePath + " exists";
-        return { message: message, status: "CORRECT"};
+        statusMessage.message = "The executable " + executablePath + " exists";
       }
+      return statusMessage;
     },
 
     executeWithCallback: function(execLine) {
-      var child = exec(execLine, {async: true});
+      var child = exec(execLine, {async:true, silent:true});
       child.stdout.on('data', function(data) {
-        echo("From inside --> " + data);
+        echo(data);
       });
-    }
+      return child;
+    },
 
-}
+    execute: function(execLine) {
+        var p = exec(execLine);
+        var statusMessage = new StatusMessage();
+        statusMessage.message = p.output;
+        if (p.code != 0) {
+          statusMessage.status = CommandStatus.ERROR;
+        } else {
+          statusMessage.status = CommandStatus.OK;
+        }
+        return statusMessage;
+    }
+};
+
+module.exports = shellService;
