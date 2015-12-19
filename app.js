@@ -1,6 +1,5 @@
 var express = require('express');
 var bodyParser = require('body-parser');
-
 var app = express();
 app.use(express.static('public'));
 
@@ -17,11 +16,11 @@ app.use(function(err, req, res, next) {
     res.status(err.status || 500);
 });
 
-var server = app.listen(3000, function () {
-  var host = server.address().address;
-  var port = server.address().port;
-
-  console.log('App listening at http://%s:%s', host, port);
-});
+// var server = app.listen(3000, function () {
+//   var host = server.address().address;
+//   var port = server.address().port;
+//
+//   console.log('App listening at http://%s:%s', host, port);
+// });
 
 module.exports = app;
