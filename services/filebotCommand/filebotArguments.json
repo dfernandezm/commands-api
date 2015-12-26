@@ -1,0 +1,13 @@
+{
+  "SCRIPT": "-script",
+  "DEF": "--def",
+  "LOGFILE": "--log-file",
+  "ACTION": "-action",
+  "DEF_CLEAN": "--def clean=",
+  "DEF_UNSORTED": "--def unsorted=",
+  "DEF_SKIP_EXTRACT": "--def skipExtract=",
+  "DEF_XBMC": "--def xbmc=",
+  "DEF": "--def",
+  "CONFLICT": "--conflict",
+  "OUTPUT": "--output"
+}

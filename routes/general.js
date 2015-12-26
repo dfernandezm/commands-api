@@ -1,16 +1,25 @@
-var express = require('express');
-var router = express.Router();
+var router = require('./router');
 
-// All routes
+// For all routes
 router.use(function(req, res, next) {
     // do logging
     console.log('Invoking routes');
     next(); // make sure we go to the next routes and don't stop here
 });
 
-// get /
+/**
+ GET /
+*/
 router.get('/', function (req, res) {
-    res.json({ message: 'Welcome'});
+  console.log("should invoke this...")
+  res.json({ message: 'Welcome to commands api'});
+});
+
+/**
+ GET /status
+*/
+router.get('/status', function (req, res) {
+   res.json({ status: 'OK'});
 });
 
 

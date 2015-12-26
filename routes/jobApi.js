@@ -1,10 +1,11 @@
-var express = require('express');
-var router = express.Router();
+var router = require('./router');
 var debug = require('debug')('commands-api');
 var jobService = require('../services/jobService');
 
-// get /job
-router.get('/', function(req, res){
+/**
+ GET /api/jobs/filebot
+ */
+router.get('/filebot', function(req, res) {
 
   debug('About to create job...');
 

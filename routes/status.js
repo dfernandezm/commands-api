@@ -1,14 +1,12 @@
-var express = require('express');
-var router = express.Router();
+var router = require('./router');
 var filebotService = require('../services/filebotService');
 
-// get /status
-router.get('/', function (req, res) {
-  res.json({ status: 'OK'});
-});
-
+/**
+ GET /api/status/filebot
+*/
 router.get('/filebot', function(req, res) {
   var status = filebotService.getFilebotInfo();
+  filebotService.testCommand();
   res.json(status);
 });
 

@@ -1,0 +1,17 @@
+{
+  "executable": "filebot",
+  "output": "/tmp",
+  "logFile" : "/tmp/filebot.log",
+  "action": "test",
+  "strict": "-non-strict",
+  "conflict": "auto",
+  "clean": "y",
+  "skipExtract": "y",
+  "contentLanguage": "en",
+  "unsorted": "y",
+  "amcScript": "fn:amc",
+  "moviesFolderName": "Movies",
+  "tvShowsFolderName": "TV Shows",
+  "tvShowsFormat": "seriesFormat=$TV_SHOWS_FOLDER/{n.upperInitial()}/{'Season '+s}/{n.upperInitial()} {sxe.pad(2)} {t}",
+  "moviesFormat": "movieFormat=$MOVIES_FOLDER/{n} ({y})/{n}"
+}
