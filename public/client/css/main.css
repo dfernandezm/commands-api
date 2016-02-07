@@ -1,0 +1,289 @@
+* {
+	margin: 0;
+	padding: 0;
+}
+
+body.login {
+    background: url('../img/game-of-thrones.jpg') no-repeat center center fixed;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: hidden;
+		background-color: rgba(0,0,255,0.7);
+		opacity: .9
+
+}
+
+
+.page-header {
+	margin-top: 10px;
+	font-size: 28px;
+}
+
+.torrent-feeds {
+    margin-top: 10px;
+}
+
+.panel-heading .btn {
+    padding: 0 10px 0 10px;
+}
+
+.magnet {
+	background: url("../img/magnet.png") no-repeat;
+	width: 32px;
+	height: 32px;
+	text-indent: -9999px;
+	display: inline-block;
+  	margin: 0 auto;
+}
+
+.download-torrent {
+	background: url("../img/download-file.png") no-repeat;
+	width: 32px;
+	height: 32px;
+	text-indent: -9999px;
+	display: inline-block;
+  	margin: 0 auto;
+}
+
+
+.table-striped tbody tr.highlight td { background-color: red; }
+
+.btn {
+    margin-right: 4px;
+}
+
+.welcome {
+	margin-top: 60px;
+	padding-left:20px;
+}
+
+
+#page-wrapper {
+	border-left: none;
+}
+
+/* This is mobile */
+.sidebar {
+}
+
+/* This is a desktop */
+/* @media only screen and (min-width : 480px) { */
+@media (min-width : 480px) {
+	.sidebar {
+		border: 1px solid #e7e7e7;
+	}
+
+	.navbar-header {
+		 float: none;
+	}
+
+	h4 {
+		font-size: 18px;
+	}
+}
+
+@media (min-width: 768px) {
+
+	body {
+		background-color: #fff;
+	}
+
+	.sidebar {
+		margin: 10px;
+		border: 1px solid #e7e7e7;
+	}
+
+}
+
+
+/* For the login form */
+/* http://stackoverflow.com/questions/22196587/how-to-center-align-vertically-the-container-in-bootstrap */
+.vertical-center {
+  min-height: 100%;  /* Fallback for browsers do NOT support vh unit */
+  min-height: 100vh; /* These two lines are counted as one :-)       */
+  z-index: 50;
+  display: flex;
+  align-items: center;
+
+}
+
+.vertical-center .container {
+	border: 1px solid #c0c0c0;
+	padding: 20px;
+	padding-top: 10px;
+    opacity:0.85;
+    filter: alpha(opacity=85);
+
+}
+
+.col-centered{
+    float: none;
+    margin: 0 auto;
+}
+
+.col-centered h3 {
+	text-align:center;
+	margin-top:10px;
+	margin-bottom:15px;
+	opacity:1;
+    filter: alpha(opacity=100);
+}
+
+.form-control {
+	opacity:1;
+    filter: alpha(opacity=100);
+}
+
+body.login form { }
+
+.input-group[class*=col-] {
+	float:left;
+}
+
+.status-form-row {
+	padding-top: 10px;
+}
+
+.status-form-row .pull-left {
+	margin-right: 5px;
+	padding-left: 2px;
+}
+
+
+.progress-bar-success {
+	text-align: center;
+}
+
+.list-group {
+	margin-top: 15px;
+	min-height: 20px;
+
+}
+
+.list-group-item {
+	margin-top: 0px;
+	margin-bottom: 0px;
+	min-height: 20px;
+	padding: 5px;
+	padding-bottom: 5px;
+	margin-right: 0;
+	border: none;
+	border-bottom: 1px solid #eee;
+}
+
+.list-group-item-text {
+	margin-top: 5px;
+	margin-bottom: 5px;
+	padding-left: 0;
+}
+
+span.label {
+	word-break: break-all;
+}
+
+.progress {
+	margin-bottom: 3px;
+	padding-left:0;
+	padding-right:0;
+	margin-top: 4px;
+}
+
+.torrent-state {
+	margin-bottom: 10px;
+}
+
+.nav li.header a {
+    cursor: default;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.nav li.header a:hover {
+    cursor: default;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.torrent-title {
+	word-break: break-all;
+}
+
+/* ensure ng-cloak hides temporary angular template */
+.ng-cloak { display:none !important; }
+
+.gray-lighter {
+	background-color: #fafafa;
+}
+
+span.torrentTitle {
+	margin-left: 4px;
+
+}
+
+.ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    -moz-binding: url('assets/xml/ellipsis.xml#ellipsis');
+}
+
+
+.vcenter {
+    display: inline-block;
+    vertical-align: middle;
+    float: none;
+}
+
+.no-padding {
+	padding: 0 !important;
+}
+
+a.action-button {
+	width:32px;
+	height: 32px;
+	text-decoration:none;
+	cursor: pointer;
+	margin-right: 4px;
+}
+
+a.play-button {
+	background-image: url('../img/play-button.png');
+}
+
+a.magnet-link {
+	background-image: url('../img/magnet.png');
+	width:32px;
+}
+
+a.cancel-button {
+	background-image: url('../img/cancel-button.png');
+}
+
+a.pause-button {
+	background-image: url('../img/pause-button.png');
+}
+
+a.loading-action {
+	background-image: url('../img/loading-blue.gif');
+}
+
+a.rename-button {
+	background-image: url('../img/rename-button.png');
+}
+
+a.subtitles-button {
+	background-image: url('../img/subtitles-button.png');
+}
+
+.truncate {
+	overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

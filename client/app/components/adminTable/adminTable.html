@@ -1,0 +1,36 @@
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th ng-repeat="field in fields" ng-bind="field.label"></th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="item in items" ng-class="{highlight: item==selected}">
+                <td ng-bind="$index+1"></td>
+                <td ng-repeat="field in fields">
+                     <div ng-switch on="field.type">
+                        <div ng-switch-when="TEXT" ng-bind="item[field.name]">
+                        </div>
+                        <div ng-switch-when="DATETIME" ng-bind="item[field.name]">
+                        </div>
+                        <div ng-switch-when="BOOLEAN">
+                            <a href="#" class="table-boolean glyphicon"
+                             ng-class="item[field.name] ? 'glyphicon-ok' : 'glyphicon-remove'"></a>
+                        </div>
+                     </div>
+                </td>
+                <td>
+                    <!-- expression inside the ngClick: we delegate in the parent scope the updateAction by passing in the current item as 'item',
+                    which becomes an scoped value in the parent scope of this directive. Therefore, 'item' will be available in the parent scope to manipulate
+                    - Use of '&' in the directive to achieve this -->
+                    <a ng-if="isUpdateActionDefined" href="#" ng-click="updateAction({item: item})"><span class="glyphicon glyphicon-pencil"></span>&nbsp;</a>
+                    <!-- TODO: delete action -->
+                    <a ng-if="isDeleteActionDefined" href="#" ng-click="deleteAction({item: item})"><span class="glyphicon glyphicon-remove"></span>&nbsp;</a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>

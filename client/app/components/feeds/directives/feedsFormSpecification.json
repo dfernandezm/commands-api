@@ -1,0 +1,23 @@
+{
+  "title": "Add feed",
+  "submitText": "Add",
+  "action": "ADD",
+  "fields": [{
+    "label": "Url",
+    "name": "url",
+    "type": "TEXT",
+    "value": null
+  },
+  {
+    "label": "Description",
+    "name": "description",
+    "type": "TEXT",
+    "value": null
+  },
+  {
+    "label": "Active",
+    "name": "active",
+    "type": "BOOLEAN",
+    "value": null
+  }]
+}

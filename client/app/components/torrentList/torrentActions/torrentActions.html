@@ -1,0 +1,50 @@
+<div class="torrent-actions">
+    <a ng-show="loading"
+          href="#" class="loading-action action-button pull-left">
+      &nbsp;
+    </a>
+    
+    <a ng-show="torrent.state == 'NEW' || torrent.state == 'COMPLETED_WITH_ERROR' || torrent.state == 'FAILED_DOWNLOAD_ATTEMPT' || torrent.state == 'AWAITING_DOWNLOAD'"
+            ng-click="startDownload(torrent)" class="play-button action-button pull-left" title="Start">
+      &nbsp;
+    </a>
+
+    <a ng-show="torrent.state !== 'COMPLETED' && torrent.state !== 'NEW'" title="Cancel"
+       ng-click="cancelDownload(torrent)" class="cancel-button action-button pull-left">
+      &nbsp;
+    </a>
+
+    <a ng-show="torrent.state == 'DOWNLOADING'" title="Pause"
+            ng-click="pauseDownload(torrent)" class="pause-button action-button pull-left">
+      &nbsp;
+    </a>
+    <!-- Resume -->
+    <a ng-show="torrent.state == 'PAUSED'"
+            ng-click="resumeDownload(torrent)" class="play-button action-button pull-left">
+     &nbsp;
+   </a>
+
+    <a ng-show="torrent.state == 'DOWNLOAD_COMPLETED'"
+            ng-click="rename(torrent)" class="rename-button action-button pull-left">
+      &nbsp;
+    </a>
+
+    <a ng-show="torrent.state == 'RENAMING_COMPLETED'"
+            ng-click="fetchSubtitles(torrent)" class="subtitles-button action-button pull-left">
+      &nbsp;
+    </a>
+
+    <a ng-show="torrent.magnetLink"
+            href="[[torrent.magnetLink]]" target="_blank" class="magnet-link action-button pull-left">
+      &nbsp;
+    </a>
+
+    <a ng-show="torrent.torrentFileLink"
+            href="[[torrent.torrentFileLink]]" target="_blank" class="pull-left">
+      Link
+    </a>
+
+
+
+
+</div>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" ng-app="FileManagerApp">
+<head>
+
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Media Library FileManager</title>
+
+    <link rel="stylesheet" href="client/css/bootswatch/paper/bootstrap.min.css" />
+    <link rel="stylesheet" href="client/css/angular-filemanager.css">
+
+        <script src="client/js/app/filemanager.js"></script>
+        <script src="client/js/filemanager/jquery.min.js"></script>
+        <script src="client/js/filemanager/bootstrap.min.js"></script>
+        <script src="client/js/filemanager/angular-filemanager.min.js"></script>
+        <script type="text/javascript">
+            //example to override angular-filemanager default config
+            angular.module('FileManagerApp').config(['fileManagerConfigProvider', function (fileManagerConfig) {
+                var defaults = fileManagerConfig.$get();
+
+                fileManagerConfig.set({
+                    appName: 'Media Downloader Automator - View Library',
+                    defaultLang: "es",
+                    listUrl: "api/media/list",
+                    uploadUrl: "api/media/upload",
+                    renameUrl: "api/media/rename",
+                    removeUrl: "api/media/remove",
+                    editUrl: "api/media/edit",
+                    downloadFileUrl: "api/media/download",
+                    getContentUrl: "api/media/content",
+                    sidebar: false,
+                    isEditableFilePattern: /\.(txt|srt|sh|php[3-6]?|vb)$/i,
+                    allowedActions: angular.extend(defaults.allowedActions, {
+                        remove: true,
+                        rename: true,
+                        copy: false,
+                        edit: true,
+                        changePermissions: false,
+                        compress: false,
+                        compressChooseName: false,
+                        extract: false,
+                        download: false,
+                        preview: true
+                    })
+                });
+
+            }]);
+        </script>
+</head>
+
+<body class="ng-cloak">
+ 		  <%- body -%>
+<angular-filemanager />
+</body>
+</html>

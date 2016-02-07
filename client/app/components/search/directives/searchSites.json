@@ -1,0 +1,19 @@
+{
+  "searchSites": [
+    { "id": "TPB",
+      "name": "The Pirate Bay",
+      "selected": true
+    },
+    { "id": "KT",
+      "name": "Kickass Torrents"
+    },
+    {
+      "id": "DT",
+      "name": "Divx Total"
+    },
+    {
+      "id": "LINK",
+      "name": "Direct Link"
+    }
+  ]
+}

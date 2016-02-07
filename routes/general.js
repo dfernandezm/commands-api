@@ -11,14 +11,34 @@ router.use(function(req, res, next) {
  GET /
 */
 router.get('/', function (req, res) {
-  console.log("should invoke this...")
-  res.json({ message: 'Welcome to commands api'});
+  // res.json({ message: 'Welcome to commands api'});
+  res.render('pages/index');
+});
+
+router.get('/filemanager', function (req, res) {
+  // res.json({ message: 'Welcome to commands api'});
+  res.render('pages/filemanager');
+});
+
+router.get('/search', function (req, res) {
+  // res.json({ message: 'Welcome to commands api'});
+  res.render('pages/search');
+});
+
+router.get('/status', function (req, res) {
+  // res.json({ message: 'Welcome to commands api'});
+  res.render('pages/status');
+});
+
+router.get('/automation', function (req, res) {
+  // res.json({ message: 'Welcome to commands api'});
+  res.render('pages/automation');
 });
 
 /**
  GET /status
 */
-router.get('/status', function (req, res) {
+router.get('/serverstatus', function (req, res) {
    res.json({ status: 'OK'});
 });
 

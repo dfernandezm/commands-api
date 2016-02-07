@@ -1,0 +1,28 @@
+<div class="table-responsive">
+   <table class="table table-striped">
+       <thead>
+         <tr>
+             <th>#</th>
+             <th ng-repeat="fieldLabel in fieldLabels track by $index" ng-bind="fieldLabel"></th>
+             <th>Actions</th>
+         </tr>
+       </thead>
+       <tbody>
+           <tr ng-repeat="torrent in torrents | torrentsByState:filterState track by $index">
+             <td ng-bind="offset+$index+1"></td>
+             <td ng-repeat="fieldLabel in fieldLabels track by $index">
+
+                <p ng-if="fieldLabel == 'PercentDone'" ng-bind-html="processField(torrent,fieldLabel)" />
+                <p ng-if="fieldLabel == 'State'">
+                  <render-torrent-state torrent="torrent" />
+                </p>
+
+                <p ng-if="fieldLabel != 'PercentDone' && fieldLabel != 'State'">
+                [[processField(torrent,fieldLabel)]]
+                </p>
+              </td>
+             <td class="col-sm-5"><torrent-actions torrent="torrent" /></td>
+           </tr>
+       </tbody>
+   </table>
+</div>

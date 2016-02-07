@@ -1,0 +1,7 @@
+<div class="list-group container-fluid">
+  <div class="list-group-item row-fluid clearfix" ng-class-odd="'gray-lighter'" ng-repeat="torrent in torrents | torrentsByState:filterState track by $index">
+     <div class="pull-left col-sm-12 col-xs-12 no-padding">
+      <torrent-element torrent="torrent" style="style" show-progress="showProgress" />
+     </div>
+  </div>
+</div>

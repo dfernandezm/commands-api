@@ -1,0 +1,4 @@
+<span class="label" ng-class="stateConfig[torrent.state].cssClass">
+  [[stateConfig[torrent.state].stateText]]
+  <strong ng-if="(torrent.state == 'DOWNLOADING'|| torrent.state == 'PAUSED') && torrent.percentDone">&nbsp;-&nbsp;[[torrent.percentDone]]%</strong>
+</span>

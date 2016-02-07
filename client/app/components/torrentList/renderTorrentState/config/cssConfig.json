@@ -1,0 +1,13 @@
+{
+  "DOWNLOADING" : "label-primary",
+  "AWAITING_DOWNLOAD" : "label-default",
+  "PAUSED" : "label-info",
+  "RENAMING" : "label-warning",
+  "RENAMING_COMPLETED" : "label-warning",
+  "FETCHING_SUBTITLES" : "label-warning",
+  "DOWNLOAD_COMPLETED" : "label-warning",
+  "FAILED_DOWNLOAD_ATTEMPT" : "label-danger",
+  "COMPLETED_WITH_ERROR" : "label-danger",
+  "COMPLETED" : "label-success",
+  "NEW": "label-success"
+}

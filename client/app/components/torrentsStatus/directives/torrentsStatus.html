@@ -1,0 +1,20 @@
+<div class="torrentsStatusPage container-fluid">
+   <div class="row-fluid clearfix">
+	     <h1 class="page-header">Downloads status</h1>
+	 </div>
+
+  <div class="row-fluid search-results clearfix ng-cloak" role="tabpanel">
+    <tabset>
+      <tab heading="Active" active="true">
+        <torrents-elements style="COMPACT" torrents="torrents" show-progress="true" filter-state="DOWNLOADING,PAUSED,DOWNLOAD_COMPLETED,RENAMING,RENAMING_COMPLETED,FETCHING_SUBTITLES" />
+      </tab>
+      <tab heading="Awaiting download">
+        <torrents-elements style="COMPACT" torrents="torrents" filter-state="AWAITING_DOWNLOAD" />
+      </tab>
+      <tab heading="Completed">
+        <torrents-elements style="COMPACT" torrents="torrents" filter-state="COMPLETED" />
+      </tab>
+    </tabset>
+  </div>
+
+</div>

@@ -1,0 +1,32 @@
+<div class="row-fluid">
+
+  <div ng-if="style !== 'COMPACT'" class="row-fluid clearfix torrent-state">
+    <div class="list-group-item-text no-padding">
+      <render-torrent-state torrent="torrent" />
+    </div>
+  </div>
+
+   <div class="row-fluid no-padding clearfix">
+    <div class="col-sm-9 col-xs-9">
+      <div class="row-fluid clearfix torrent-title">
+       <h4 class="list-group-item-heading no-padding container-fluid">
+         <!-- use this https://github.com/lorenooliveira/ng-text-truncate -->
+         <span class="torrentTitle col-sm-10 col-md-9 no-padding truncate">[[fieldFormat('title',torrent)]]</span>
+         <span ng-if="style == 'COMPACT'" class="col-sm-2 col-md-1 no-padding pull-left"> <render-torrent-state torrent="torrent" /></span>
+       </h4>
+      </div>
+      <div ng-if="showProgress" class="row-fluid clearfix no-padding">
+        <progress-bar class="no-padding" ng-hide="torrent.state != 'DOWNLOADING' && torrent.state != 'PAUSED'" percent="torrent.percentDone || 0" class="pull-left col-sm-4 no-padding" />
+      </div>
+      <div class="list-group-item-text no-padding">
+        <i><i ng-if="style == 'COMPACT'">&nbsp;&nbsp;</i>[[fieldFormat('date',torrent)]]</i>
+        <i ng-if="torrent.size">&nbsp; | &nbsp; [[fieldFormat('size',torrent)]]</i>
+        <i ng-if="torrent.seeds">&nbsp; | &nbsp; [[fieldFormat('seeds',torrent)]]</i>
+      </div>
+    </div>
+    <div class="col-sm-3 col-xs-3 vcenter">
+     <torrent-actions torrent="torrent" class="pull-right"/>
+    </div>
+   </div>
+
+</div>

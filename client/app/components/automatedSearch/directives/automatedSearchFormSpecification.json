@@ -1,0 +1,75 @@
+{
+  "title": "Add TV Show",
+  "submitText": "Add",
+  "action": "ADD",
+  "fields": [{
+    "label": "Title",
+    "name": "contentTitle",
+    "type": "TEXT",
+    "showInTable": true,
+    "value": null
+  },
+  {
+    "label": "Language",
+    "name": "contentLanguage",
+    "helpText": "Main language of the content",
+    "type": "TEXT",
+    "showInTable": true,
+    "value": null
+  },
+  {
+    "label": "Quality",
+    "helpText": "Quality required for this content",
+    "name": "preferredQuality",
+    "type": "TEXT",
+    "showInTable": true,
+    "value": "720P"
+  },
+  {
+    "label": "Format",
+    "helpText": "Video format",
+    "name": "preferredFormat",
+    "type": "TEXT",
+    "showInTable": false,
+    "value": "mp4"
+  },
+  {
+    "label": "Enable subtitles",
+    "helpText": "Whether or not subtitles will be downloaded for this content",
+    "name": "subtitlesEnabled",
+    "type": "BOOLEAN",
+    "showInTable": false,
+    "value": true
+  },
+  {
+    "label": "Subtitle languages",
+    "helpText": "Languages to download subtitles",
+    "name": "subtitlesLanguages",
+    "type": "TEXT",
+    "showInTable": false,
+    "value": null
+  },
+  {
+    "label": "Reference Date",
+    "helpText": "Date from which this content will be checked. Leave blank for today's date",
+    "name": "referenceDate",
+    "type": "DATETIME",
+    "showInTable": true,
+    "value": null
+  },
+  {
+    "label": "Start download automatically",
+    "helpText": "Whether or not fetched content should be started automatically or left in AWAITING DOWNLOAD state",
+    "name": "downloadStartsAutomatically",
+    "type": "BOOLEAN",
+    "showInTable": false,
+    "value": null
+  },
+  {
+    "label": "Active",
+    "name": "active",
+    "type": "BOOLEAN",
+    "showInTable": true,
+    "value": null
+  }]
+}

@@ -1,0 +1,9 @@
+<div class="input-group custom-search-form row-fluid col-md-12 no-padding">
+    <div class="col-md-9 no-padding">
+     <input type="text" class="form-control" ng-model="magnetOrTorrentLink"
+            ng-blur="populateTorrent()" placeholder="Paste link...">
+   </div>
+   <div class="input-group-btn col-md-3">
+        <torrent-actions torrent="torrent" />
+   </div>
+</div>

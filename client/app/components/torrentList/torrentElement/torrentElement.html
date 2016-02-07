@@ -1,0 +1,30 @@
+<div class="row-fluid">
+
+  <div ng-if="style !== 'COMPACT'" class="row-fluid clearfix torrent-state">
+    <div class="list-group-item-text no-padding">
+      <render-torrent-state torrent="torrent" />
+    </div>
+  </div>
+
+  <div class="row-fluid clearfix torrent-title">
+   <h4 class="list-group-item-heading no-padding">[[fieldFormat('title',torrent)]]</h4>
+  </div>
+
+  <div ng-if="showProgress" class="row-fluid clearfix no-padding">
+    <progress-bar class="no-padding" ng-hide="torrent.state != 'DOWNLOADING' && torrent.state != 'PAUSED'" percent="torrent.percentDone || 0" class="pull-left col-sm-4 no-padding" />
+  </div>
+
+   <div class="row-fluid no-padding clearfix">
+     <div class="list-group-item-text no-padding">
+      <strong ng-if="style == 'COMPACT'"><render-torrent-state torrent="torrent" /></strong>
+      <strong>&nbsp; | &nbsp;[[fieldFormat('date',torrent)]]</strong>
+      <strong ng-if="torrent.size">&nbsp; | &nbsp; [[fieldFormat('size',torrent)]]</strong>
+      <strong ng-if="torrent.seeds">&nbsp; | &nbsp; [[fieldFormat('seeds',torrent)]]</strong>
+     </div>
+   </div>
+
+   <div class="row-fluid clearfix">
+     <torrent-actions torrent="torrent" class="pull-left"/>
+   </div>
+
+</div>

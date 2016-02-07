@@ -1,0 +1,46 @@
+{
+  "DOWNLOADING": {
+      "cssClass": "label-primary",
+      "stateText": "DOWNLOADING"
+  },
+  "AWAITING_DOWNLOAD": {
+    "cssClass": "label-default",
+    "stateText": "AWAITING DOWNLOAD"
+  },
+  "PAUSED" : {
+    "cssClass": "label-info",
+    "stateText": "PAUSED"
+  },
+  "RENAMING" : {
+    "cssClass": "label-warning",
+    "stateText": "RENAMING"
+  },
+  "RENAMING_COMPLETED": {
+    "cssClass": "label-warning",
+    "stateText": "RENAMING COMPLETED"
+  },
+  "FETCHING_SUBTITLES" : {
+    "cssClass": "label-warning",
+    "stateText": "FETCHING SUBTITLES"
+  },
+  "DOWNLOAD_COMPLETED" : {
+    "cssClass": "label-warning",
+    "stateText": "DOWNLOAD COMPLETED"
+  },
+  "FAILED_DOWNLOAD_ATTEMPT" : {
+    "cssClass": "label-danger",
+    "stateText": "FAILED DOWNLOAD"
+  },
+  "COMPLETED_WITH_ERROR" : {
+    "cssClass": "label-danger",
+    "stateText": "COMPLETED WITH ERROR"
+  },
+  "COMPLETED" : {
+    "cssClass": "label-success",
+    "stateText": "COMPLETED"
+  },
+  "NEW" : {
+    "cssClass": "label-success",
+    "stateText": "NEW"
+  }
+}
