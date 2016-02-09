@@ -1,4 +1,5 @@
 var router = require('./router');
+var crawler = require('../services/crawler')
 
 // For all routes
 router.use(function(req, res, next) {
@@ -39,6 +40,12 @@ router.get('/automation', function (req, res) {
  GET /status
 */
 router.get('/serverstatus', function (req, res) {
+   crawler.test(0);
+   crawler.test(1);
+   crawler.test(2);
+   crawler.test(3);
+   crawler.test(4);
+   crawler.test(5);
    res.json({ status: 'OK'});
 });
 
