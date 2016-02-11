@@ -1,0 +1,131 @@
+$ = require('cheerio');
+var crawlerUtils = require('./crawlerUtils');
+var format = require('string-format');
+var moment = require('moment');
+
+//var recentTorrentsUrl = "https://thenewbay.org/recent/{}";
+var recentTorrentsUrl = "https://thenewbay.org/search/suits/0/99/{}";
+var tpbGB = 'GiB';
+var tpbMB = 'MiB';
+var tpbToday = 'Today';
+var tpbYesterday = 'Y-day';
+var dateRegex = /Uploaded\s([^,]*).*/;
+// Today 23:50 / Y-day 11:01
+var recentTimeRegex = /day\s([^,]*).*$/;
+// 08-07 2015 or 08-07 05:55
+var fullDateRegex = /(\d+)\-(\d+)\s(?:(\d+$)|(\d+:\d+))/;
+
+function parseDate(rawDateString) {
+  var match = dateRegex.exec(rawDateString);
+  var datePart = match[1];
+  var now = moment();
+  var date = '';
+
+  //TODO: check for errors
+  match = recentTimeRegex.exec(datePart);
+
+  // Today 23:50 / Y-day 11:01
+  if(match !== null && match.length > 1) {
+      var time = match[1].split(':');
+      var hours = parseInt(time[0]);
+      var minutes = parseInt(time[1]);
+      now.hours(hours);
+      now.minutes(minutes);
+      if (datePart.indexOf(tpbYesterday) > -1) {
+        now.subtract('days', 1);
+      }
+  } else {
+    // datePart is a full date in TPB format: 08-07 2015 or 08-07 05:55
+    match = fullDateRegex.exec(datePart);
+    console.log('date: ', datePart);
+    if (match.length > 1) {
+      // 1st group: day (regular case)
+      // 2nd group: month (regular case)
+      now.month(parseInt(match[1]) - 1);
+      now.date(parseInt(match[2]));
+      // 3rd capturing group either year or time
+      var yearOrTime = match[3];
+
+      // It is undefined when no year is present
+      if (typeof yearOrTime == 'undefined') {
+        yearOrTime = match[4];
+      }
+
+      var yearOrTimeParts = yearOrTime.split(':');
+      if (yearOrTimeParts.length == 1) {
+        // No :, it is a year
+        now.year(parseInt(yearOrTimeParts[0]));
+        now.hours(0);
+        now.minutes(0);
+      } else {
+         // Has :, it is a time
+         now.hours(parseInt(yearOrTimeParts[0]));
+         now.minutes(parseInt(yearOrTimeParts[1]));
+      }
+    }
+  }
+
+  date = now.format('DD-MM-YYYY HH:mm');
+  return date;
+}
+
+tpb = {};
+
+tpb.extractTorrentDataForSinglePage = function (html) {
+
+  var tableResult = $('#searchResult', html);
+  var torrents = [];
+
+  $('.vertTh', tableResult).each(function (index, element) {
+    var tableElement = $(element).parent();
+
+    var title = $('.detName a',tableElement).text();
+    var magnet = $('td > a', tableElement).eq(0).attr('href');
+    var seeds = $('td', tableElement).eq(2).text();
+    var rawDateAndSize = $('.detDesc', tableElement).eq(0).text();
+    var date = '';
+    //TODO: from magnet
+    var hash = '';
+    //TODO:
+    var size = '';
+    // http://stackoverflow.com/questions/432493/how-do-you-access-the-matched-groups-in-a-javascript-regular-expression
+    try {
+      date = parseDate(rawDateAndSize);
+      //var size = parseSize(rawDateAndSize);
+    } catch (err) {
+      console.log('Error parsing date ', err.message);
+    }
+
+    try {
+      seeds = parseInt(seeds);
+    } catch(err) {
+      console.log('Error parsing seeds ' + seeds, err.message);
+      seeds = '';
+    }
+
+    var torrent = {
+      title: title,
+      magnetLink: magnet,
+      seeds: seeds,
+      date: date,
+      size: size,
+      hash: hash
+    }
+
+    torrents.push(torrent);
+    console.log('torrent: ', torrent);
+
+    //TODO: Store this in MongoDB
+  });
+
+  return torrents;
+}
+
+tpb.recentVideoTorrents = function() {
+  //format, replace placeholder: var pagedRecentTorrents = format
+  console.log('==== Getting recent video torrents from The Pirate Bay ====');
+  var url = format(recentTorrentsUrl, '0')
+  crawlerUtils.attemptDataExtractionFromUrl(url, tpb.extractTorrentDataForSinglePage);
+}
+
+module.exports = tpb;

@@ -13,7 +13,7 @@ mod = angular
         link: (scope) ->
 
           scope.searchSites = (require './searchSites.json').searchSites
-
+          
           scope.loading = false
           scopeUpdateClosures = {}
 

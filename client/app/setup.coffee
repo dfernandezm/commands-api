@@ -5,7 +5,6 @@ search = require "./components/search/search"
 torrentSingleDownload =
     require './components/torrentSingleDownload/torrentSingleDownload'
 
-console.log 'NAME ' + torrentsStatus
 app = window.app = angular.module 'dutilsApp', ['ngRoute'
     'ngResource'
     'ui.bootstrap'
@@ -16,10 +15,7 @@ app = window.app = angular.module 'dutilsApp', ['ngRoute'
     torrentSingleDownload
 ]
 
-app.config ['$routeProvider','$httpProvider','$interpolateProvider',
-            '$compileProvider',
-            ($routeProvider, $httpProvider, $interpolateProvider,
-             $compileProvider) ->
+app.config ['$routeProvider','$httpProvider','$interpolateProvider','$compileProvider', ($routeProvider, $httpProvider, $interpolateProvider, $compileProvider) ->
   # Avoid having this header here! - use cookies or token
   # $httpProvider.defaults.headers.common['Authorization'] =
   # 'Basic YWRtaW46YWRtaW5wYXNz'
@@ -36,6 +32,4 @@ app.config ['$routeProvider','$httpProvider','$interpolateProvider',
         return json
       else
         return json
-
-
 ]
