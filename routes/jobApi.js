@@ -1,13 +1,22 @@
 var router = require('./router');
-var debug = require('debug')('commands-api');
+var debug = require('debug')('tvster');
 var jobService = require('../services/jobService');
 
-/**
- GET /api/jobs/filebot
- */
-router.get('/filebot', function(req, res) {
 
-  debug('About to create job...');
+/**
+ GET /api/jobs
+ */
+router.get('/api/jobs', function(req,res){
+   debug('Return all jobs');
+   res.json({resp: 'All jobs'})
+ });
+
+/**
+ GET /api/jobs/rename
+ */
+router.get('/api/jobs/rename', function(req, res) {
+
+  debug('About to create a rename job...');
 
   resultClosures = {};
   resultClosures.success = function(newJob) {
