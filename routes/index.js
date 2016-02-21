@@ -5,4 +5,5 @@ module.exports = function (app) {
   app.use('/api/search', require('./search'));
   app.use('/api/status', require('./status'));
   app.use('/api/jobs', require('./jobApi'));
+  app.use('/api/settings', require('./settings'));
 };

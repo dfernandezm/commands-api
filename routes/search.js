@@ -1,6 +1,5 @@
 var router = require('./router');
 var debug = require('debug')('tvster');
-var jobService = require('../services/jobService');
 
 /**
  GET /api/search?searchQuery=XX&sitesParam=YY
