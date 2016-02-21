@@ -41,7 +41,18 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.STRING,
       allowNull: false,
       field: 'transcode_temp_path'
+    },
+    preferredLanguage: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'preferred_language'
+    },
+    subtitlesEnabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      field: 'subtitles_enabled'
     }
+
   }, {
     underscored: true,
     timestamps: false,

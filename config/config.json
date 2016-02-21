@@ -1,0 +1,6 @@
+{
+  "development": {
+    "dialect" : "mysql",
+    "url": "mysql://root:root@localhost:13306/dutils_server"
+  }
+}
