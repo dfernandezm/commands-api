@@ -1,0 +1,9 @@
+{
+  "type": "LISTING",
+  "proxies": [
+    "https://ukpirate.org"
+  ],
+  "searchUrlTemplate": "{baseUrl}/search/{searchQuery}/0/3/0",
+  "recentUrlTemplate": "{baseUrl}/recent/{pageNumber}",
+  "searchListSelector": "#searchResult"
+}

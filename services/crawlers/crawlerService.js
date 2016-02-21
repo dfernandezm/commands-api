@@ -2,8 +2,8 @@ var tpb = require('./tpb');
 
 crawlerService = {};
 
-crawlerService.recentTpb = function() {
-  tpb.recentVideoTorrents();
+crawlerService.recentVideoTorrents = function(page) {
+  return tpb.recentVideoTorrents(page);
 }
 
 module.exports = crawlerService;
