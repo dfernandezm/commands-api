@@ -15,4 +15,11 @@ router.get('/api/search', function(req, res) {
 
 });
 
+router.get('/api/search/predb', function(req, res) {
+  crawlerService.preDb().then(function(result) {
+    res.json({releases: result});
+  });
+
+});
+
 module.exports = router;
