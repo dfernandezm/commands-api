@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Startup script that first syncs the model with the Database and then
-// launches the server 
+// launches the server
 
 var debug = require('debug')('commands-api');
 var app = require('../app');

@@ -39,10 +39,18 @@ RUN filebot -script fn:sysinfo
 ADD create-mediacenter-local.sh $INSTALL_DIR/create-mediacenter-local.sh
 RUN chmod +x $INSTALL_DIR/create-mediacenter-local.sh
 RUN cd $INSTALL_DIR && ./create-mediacenter-local.sh
-RUN service apache2 start \
-    /etc/init.d/transmission-daemon start
 
-EXPOSE 3000 80 9091 13306 22 3306
-USER osmc
-CMD /bin/bash
-#ENV MYSQL_PORT 13306
+ADD config-mysql.sh $INSTALL_DIR/config-mysql.sh
+ADD db/tvster_dump.sql $INSTALL_DIR/tvster_dump.sql
+RUN chmod +x $INSTALL_DIR/config-mysql.sh
+RUN cd $INSTALL_DIR && ./config-mysql.sh
+
+ADD start-services.sh $INSTALL_DIR/start-services.sh
+RUN chmod +x $INSTALL_DIR/start-services.sh
+
+RUN npm install -g nodemon
+RUN apt-get -y install vim telnet net-tools
+
+EXPOSE 3000 80 9091 22 3306
+#USER osmc
+CMD $INSTALL_DIR/start-services.sh
