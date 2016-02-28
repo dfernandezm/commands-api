@@ -1,8 +1,45 @@
+# Development environment using Docker
 
-## Configure shell
+These instructions are for Mac OS X.
+
+## Install and configure Docker
+
+Download and install Docker [here](https://docs.docker.com/mac/). After successfull installation, configure your shell to run Docker commands
 ```
 eval "$(docker-machine env default)"
 ```
+
+## Enable local file sharing using `rsync`
+
+To properly enable file sharing between the Docker VM and your system, use the toolbox [docker-osx-dev](https://github.com/brikis98/docker-osx-dev) which uses `rsync` instead of the default Virtualbox filesystem.
+
+* Clone or download the repo. The main executable `docker-osx-dev` is under `src` folder.
+
+* Install the dependencies (requires Homebrew):
+  ```
+  docker-osx-dev install --only-dependencies
+  ```
+
+* Sync your desired folder:
+  ```
+  docker-osx-dev -s /your/folder/to/sync
+  ```
+
+* Or move directly into it and run:
+  ```
+  docker-osx-dev
+  ```
+
+* Once `docker-osx-dev` has started sharing you desired directory, open a new tab, move to your shared folder and start a container there:
+  ```
+  docker run -v $(pwd):/tvster -p 3000:3000 -p 3308:3306 -it dfernandez/tvster:latest /bin/bash
+  ```
+
+  The previous command starts a container from the image `dfernandez/tvster:latest` in interactive mode (`-i`). It shares the current directory
+  as a volume called `/tvster` inside the container. When launching, the container will start Apache, Transmission and MySQL apart from running
+  `nodemon` on the shared folder to automatically start the app.
+
+# Useful Docker commands
 
 ## Delete old containers / images
 ```
@@ -14,42 +51,40 @@ docker images | grep 'minutes ago' | awk '{print $3}' | xargs docker rmi
 ```
 docker run -v $(pwd):/tvster -p 3000:3000 -p 3308:3306 -it dfernandez/tvster:latest /bin/bash
 ```
-* --rm : deletes filesystem when the container exits
+* `--rm`: clears the filesystem when the container exits
 
-## Troubleshooting
+# Troubleshooting and best practices
+
+* Some gotchas and information about Docker best practices when building images
 ```
 http://www.markbetz.net/2014/01/31/docker-build-files-the-context-of-the-run-command/
 https://jpetazzo.github.io/2014/06/23/docker-ssh-considered-evil/
 ```
 
-#### Port forwarding in Mac and others
+* Port forwarding
 ```
 https://github.com/boot2docker/boot2docker/blob/master/doc/WORKAROUNDS.md
 ```
 
-### Inspect broken image build
+* Inspect broken image build: when building an image from a Dockerfile, Docker runs every command
+and commits its changes to an intermediate container. If any command fails, it is possible to run the previously
+generated container and debug it. So, given the build trace:
+
 ```
-docker run --rm -it 338e1772a220 /bin/bash
+...
+Step 2 : RUN echo 'bar' >> /tmp/foo.txt
+ ---> Running in a180fdacd268
+ ---> 40fd00ee38e1
+ ...
 ```
 
-# Resource Management
+It is possible to start the container `40fd00ee38e1`:
+
+```
+docker run --rm -it 40fd00ee38e1 /bin/bash
+```
+
+# Resource Management article
 ```
 https://goldmann.pl/blog/2014/09/11/resource-management-in-docker/#_cpu
-```
-
-# Setup development environment (Mac OS X)
-
-Use project:
-```
-https://github.com/brikis98/docker-osx-dev
-```
-
-Run dependencies install:
-```
-docker-osx-dev install --only-dependencies
-```
-
-Sync your desired folder:
-```
-docker-osx-dev -s /your/folder/to/sync
 ```
