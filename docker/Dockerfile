@@ -1,7 +1,7 @@
 FROM nodesource/jessie:4.3.1
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 RUN apt-get update
-RUN apt-get -y install sudo git wget ntfs-3g curl ssh
+RUN apt-get -y install sudo git wget ntfs-3g curl ssh less unzip vim telnet net-tools
 RUN useradd -m osmc && echo "osmc:osmc" | chpasswd && adduser osmc sudo
 ENV INSTALL_DIR /opt/software/install
 RUN echo "Building TVster image..."
@@ -20,14 +20,12 @@ RUN $INSTALL_DIR/install-transmission.sh
 ADD settings.json $INSTALL_DIR/
 ADD transmission-daemon-defaults $INSTALL_DIR/
 RUN mkdir -p /opt/software/logs/transmission \
-    mkdir -p /var/lib/transmission-daemon/info \
-    mkdir -p /etc/default/transmission-daemon
+    mkdir -p /var/lib/transmission-daemon/info
 RUN cp $INSTALL_DIR/transmission-daemon-defaults /etc/default/transmission-daemon
 RUN cp $INSTALL_DIR/settings.json /var/lib/transmission-daemon/info
-RUN chown $SERVICES_USER:$SERVICES_USER /var/lib/transmission-daemon/info
+RUN chown -R $SERVICES_USER:$SERVICES_USER /var/lib/transmission-daemon/info
 
 # Install Filebot
-RUN apt-get install -y unzip
 ADD filebot-rpi-template.sh $INSTALL_DIR/filebot-rpi-template.sh
 ADD install-filebot.sh $INSTALL_DIR/install-filebot.sh
 RUN chmod +x $INSTALL_DIR/install-filebot.sh
@@ -49,7 +47,6 @@ ADD start-services.sh $INSTALL_DIR/start-services.sh
 RUN chmod +x $INSTALL_DIR/start-services.sh
 
 RUN npm install -g nodemon
-RUN apt-get -y install vim telnet net-tools
 
 EXPOSE 3000 80 9091 22 3306
 #USER osmc

@@ -49,8 +49,10 @@ docker images | grep 'minutes ago' | awk '{print $3}' | xargs docker rmi
 
 ## Run an image as a container
 ```
-docker run -v $(pwd):/tvster -p 3000:3000 -p 3308:3306 -it dfernandez/tvster:latest /bin/bash
+docker run -v $(pwd):/tvster -p 3000:3000 -p 3308:3306 -p 9091:9091 --privileged -it dfernandez/tvster:latest /bin/bash
+docker run -v $(pwd):/tvster -p 3000:3000 -p 3308:3306 -p 9091:9091 --privileged -it sha256:84809 /bin/bash
 ```
+* `--cap-add SYS_PTRACE` or `--privileged=true`: fix problems deleting PID files when stopping daemon services
 * `--rm`: clears the filesystem when the container exits
 
 # Troubleshooting and best practices
@@ -88,3 +90,7 @@ docker run --rm -it 40fd00ee38e1 /bin/bash
 ```
 https://goldmann.pl/blog/2014/09/11/resource-management-in-docker/#_cpu
 ```
+
+# Transmission in Docker
+
+https://github.com/firecat53/dockerfiles/tree/master/transmission
