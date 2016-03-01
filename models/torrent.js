@@ -1,6 +1,6 @@
 module.exports = function(sequelize, DataTypes) {
 
-  var Torrent = sequelize.define('mediacenterSettings', {
+  var Torrent = sequelize.define('torrent', {
     id: {
       type: DataTypes.INTEGER(11),
       allowNull: false,
@@ -89,20 +89,11 @@ module.exports = function(sequelize, DataTypes) {
     dateFinished: {
       type: DataTypes.DATE,
       allowNull: true
-    },
-    automatedSearchConfigId: {
-      type: DataTypes.INTEGER(11),
-      field: 'automated_search_config_id',
-      allowNull: true,
-      references: {
-        model: 'automatedSearchConfig',
-        key: 'id'
-      }
     }
   }, {
     underscored: true,
     timestamps: false,
-    tableName: 'mediacenter_settings'
+    tableName: 'torrent'
   });
 
   return Torrent;

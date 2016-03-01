@@ -6,4 +6,5 @@ module.exports = function (app) {
   app.use('/api/status', require('./status'));
   app.use('/api/jobs', require('./jobApi'));
   app.use('/api/settings', require('./settings'));
+  app.use('/api/transmission', require('./torrent'));
 };

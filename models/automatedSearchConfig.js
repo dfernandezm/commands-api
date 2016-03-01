@@ -1,5 +1,6 @@
 module.exports = function(sequelize, DataTypes) {
-  return sequelize.define('automatedSearchConfig', {
+
+  var AutomatedSearchConfig = sequelize.define('automatedSearchConfig', {
     id: {
       type: DataTypes.INTEGER(11),
       allowNull: false,
@@ -65,9 +66,16 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.BOOLEAN,
       allowNull: false
     }
-  }, {
+  },{
+    classMethods: {
+      associate: function(models) {
+        AutomatedSearchConfig.belongsTo(models.torrent)
+      }
+    },
     underscored: true,
     timestamps: false,
-    tableName: 'mediacenter_settings'
+    tableName: 'automated_search_config'
   });
+
+  return AutomatedSearchConfig;
 };
