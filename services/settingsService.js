@@ -1,8 +1,11 @@
+var _ = require('lodash');
+var sequelize = require('../models').sequelize;
+var log = require('./logger');
+
 var TransmissionSettings = require('../models').transmissionSettings;
 var MediacenterSettings = require('../models').mediacenterSettings;
-var _ = require('lodash');
+
 var settingsService = {};
-var sequelize = require('../models').sequelize;
 
 // Consider default the id = 1
 function findOne(model, transaction) {
@@ -11,7 +14,6 @@ function findOne(model, transaction) {
     transaction: transaction
   });
 }
-
 
 settingsService.updateSettings = function (settingsObject) {
   return sequelize.transaction(function (t) {
@@ -47,6 +49,11 @@ settingsService.updateSettings = function (settingsObject) {
   });
 }
 
-
+settingsService.getDefaultTransmissionSettings = function() {
+  return TransmissionSettings.findById(1).then(function(ts) {
+    log.info("Successfully got transmission settings");
+    return ts;
+  })
+}
 
 module.exports = settingsService;
