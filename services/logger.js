@@ -4,4 +4,5 @@ var opts = {
 		timestampFormat:'YYYY-MM-DD HH:mm:ss.SSS'
 	};
 var log = SimpleNodeLogger.createSimpleLogger(opts);
+log.setLevel('debug');
 module.exports = log;

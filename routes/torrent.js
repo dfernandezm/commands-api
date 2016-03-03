@@ -1,7 +1,9 @@
 var router = require('./router');
 var debug = require('debug')('tvster');
 var transmissionService = require('../services/transmissionService');
+var torrentService = require('../services/torrentService');
 var log = require('../services/logger');
+
 /**
  GET /api/transmission/status
  */
@@ -17,10 +19,19 @@ router.get('/api/transmission/status', function(req, res) {
   transmissionService.status().then(function(result) {
       res.json({status: result});
   });
-
 });
 
-router.get('/api/transmission/cancel/:hash', function(req, res) {
+router.get('/api/torrents/checkstatus', function(req, res) {
+  torrentService.updateTorrentsStatus();
+  res.json({result: "OK"});
+});
+
+router.get('/api/torrents/statusstop', function(req, res) {
+  torrentService.stopTorrentsStatus();
+  res.json({result: "OK"});
+});
+
+router.get('/api/torrents/cancel/:hash', function(req, res) {
   var torrent = {};
   torrent.hash = req.params.hash;
   log.info("The hash to cancel is " + torrent.hash);

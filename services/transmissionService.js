@@ -10,6 +10,7 @@ var transmissionClient = new Powersteer({
 });
 
 var transmissionService = {};
+var globalIntervals = {};
 
 transmissionService.testConnection = function () {
 
@@ -47,7 +48,8 @@ transmissionService.status = function() {
 
   log.info("Getting status from Transmission");
   var request = { fields:['id', 'name', 'totalSize', 'percentDone', 'hashString',
-                           'torrentFile', 'magnetLink', 'rateDownload'] };
+                           'torrentFile', 'magnetLink', 'rateDownload',
+                           'webseedsSendingToUs', 'files', 'startDate'] };
   return retry(MAX_TRIES, transmissionClient.torrentGet(request)).then(returnResult);
 }
 
