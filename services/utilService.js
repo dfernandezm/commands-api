@@ -28,7 +28,7 @@ utilService.stopInterval = function(intervalName) {
 }
 
 utilService.generateGuid = function() {
-  var guid = uuid.v1().substring(0,9);
+  var guid = uuid.v1().substring(0,8);
   log.debug("Generated GUID: " + guid);
   return guid;
 }
