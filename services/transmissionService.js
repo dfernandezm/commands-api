@@ -24,29 +24,37 @@ transmissionService.testConnection = function () {
 }
 
 transmissionService.startTorrent = function(torrent) {
-
-  var torrentLink = torrent.magnetLink ? torrent.magnetLink : torrent.fileLink;
-  log.info("Torrent to add " + torrent);
+  var torrentLink = torrent.magnetLink ? torrent.magnetLink : torrent.torrentFileLink;
+  log.debug("About to start downloading torrent with link: ", torrentLink);
   return retry(MAX_TRIES, transmissionClient.torrentAdd({filename: torrentLink})).then(function(result) {
 
      log.info("Result: " + JSON.stringify(result));
 
-     //TODO: Check for 'torrent-duplicate'
      var resultJson = JSON.stringify(result);
      var resultNoHyphen = resultJson.replace('torrent-added','torrentAdded');
      var resultObject = JSON.parse(resultNoHyphen);
 
-     var torrentName = resultObject.arguments.torrentAdded.name;
-     var torrentHash = resultObject.arguments.torrentAdded.hashString;
-     log.info("Successfully started torrent: " + torrentHash);
-
-     return transmissionService.relocateAndRestart(torrentName, torrentHash);
+     if (resultObject.result === "success") {
+       var torrentResponse = resultObject.arguments.torrentAdded;
+       var torrentName = torrentResponse.name;
+       var torrentHash = torrentResponse.hashString;
+       log.info("[TORRENT-API] Successfully started torrent: " + torrentHash);
+       return transmissionService.relocateAndRestart(torrentName, torrentHash).then(function(newPath) {
+         log.debug("Returning torrent response: ", torrentResponse);
+         return { torrentResponse: torrentResponse, filePath: newPath};
+       });
+     } else if (resultObject.result === "torrent-duplicate") {
+       log.warn("[TORRENT-API] Duplicate torrent detected: " + torrentHash);
+       return transmissionService.cancelTorrent(torrentHash).then(function () {
+         return null;
+       });
+     }
   });
 }
 
 transmissionService.status = function() {
 
-  log.info("Getting status from Transmission");
+  log.debug("Getting status from Transmission");
   var request = { fields:['id', 'name', 'totalSize', 'percentDone', 'hashString',
                            'torrentFile', 'magnetLink', 'rateDownload',
                            'webseedsSendingToUs', 'files', 'startDate'] };
@@ -74,7 +82,7 @@ transmissionService.relocateAndRestart = function(torrentName, torrentHash) {
   return torrentSubfolderPath.then(function(newPath) {
     return transmissionService.setTorrentLocation(torrentHash, newPath).then(function(stl) {
       return restartTorrent.then(function(rt) {
-        log.info("Torrent restarted!");
+        log.debug("Torrent restarted!");
         return newPath;
       });
     })
@@ -111,6 +119,16 @@ transmissionService.returnErrorAndCancelTorrent = function(torrentHash) {
   };
 }
 
+transmissionService.pauseTorrent = function(torrentHash) {
+  log.debug("Pausing torrent ", torrentHash);
+  return retry(MAX_TRIES, transmissionClient.torrentStop({ids: [torrentHash]}));
+}
+
+transmissionService.resumeTorrent = function(torrentHash) {
+  log.debug("Resuming torrent ", torrentHash);
+  return retry(MAX_TRIES, transmissionClient.torrentStart({ids: [torrentHash]}));
+}
+
 // --- PRIVATE ----------------------------------------------------------------
 
 function retry(maxRetries, promise) {
@@ -119,13 +137,13 @@ function retry(maxRetries, promise) {
       log.error("Error in request to transmission after 5 tries -- giving up: ", err);
       throw err;
     }
-    log.error("Error in request to Transmission -- retrying: ", err);
+    log.warn("Error in request to Transmission -- retrying: ", err);
     return retry(maxRetries - 1, fn);
   });
 }
 
 function returnResult(result) {
-  log.info("Getting result from Transmission: ", result);
+  log.debug("Getting result from Transmission: ", result);
   return result;
 }
 

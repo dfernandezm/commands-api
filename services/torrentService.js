@@ -6,6 +6,7 @@ var TorrentState = require('./torrentState');
 var Promise = require('bluebird');
 var utilService = require('./utilService');
 var moment = require('moment');
+var _ = require('lodash');
 
 var torrentService = {}
 
@@ -28,7 +29,7 @@ torrentService.updateDataForTorrents = function() {
   });
 }
 
-torrentService.findTorrentByHash = function(torrentHash) {
+torrentService.findByHash = function(torrentHash) {
   return Torrent.findOne({ where: {hash: torrentHash} }); // returns the torrent found or null
 }
 
@@ -42,15 +43,165 @@ torrentService.persistTorrent = function(torrent) {
   });
 }
 
+torrentService.updateTorrent = function(torrent) {
+  return torrentService.findByHash(torrent.hash).then(function(currentTorrent) {
+    log.debug("Updating torrent: ", torrent.hash);
+    _.extend(currentTorrent, torrent);
+    return currentTorrent.save();
+  });
+}
+
+torrentService.pauseTorrent = function(torrent) {
+	return transmissionService.pauseTorrent(torrent.hash).then(function() {
+    log.debug("Pausing torrent: ", torrent.name);
+    torrent.state = TorrentState.PAUSED;
+    return torrentService.updateTorrent(torrent);
+  });
+}
+
+torrentService.resumeTorrent = function(torrent) {
+	return transmissionService.resumeTorrent(torrent.hash).then(function() {
+    log.debug("Resuming torrent: ", torrent.name);
+	  torrent.state = torrent.DOWNLOADING;
+	  return torrentService.updateTorrent(torrent);
+	});
+}
+
+torrentService.findTorrentByFileLink = function(fileLink) {
+  return Torrent.findOne({ where: {torrentFileLink: fileLink} });
+}
+
+torrentService.findTorrentByMagnetLink= function(magnetLink) {
+  return Torrent.findOne({ where: {magnetLink: magnetLink} });
+}
+
+
+torrentService.startTorrentDownload = function(torrent) {
+
+		var existingTorrentPromise = {};
+    var torrentFileLink = torrent.torrentFileLink
+    var magnetLink = torrent.magnetLink;
+
+    if (torrentFileLink) {
+      existingTorrentPromise = torrentService.findTorrentByFileLink(torrent.torrentFileLink)
+      log.debug("[TORRENT-API] Starting download from torrent file: ", torrentFileLink)
+    } else if (magnetLink) {
+      existingTorrentPromise = torrentService.findTorrentByMagnetLink(torrent.magnetLink);
+      log.debug("[TORRENT-API] Starting download from torrent magnet: ", magnetLink);
+    }
+
+    return existingTorrentPromise.then(function(existingTorrent) {
+      // The promise chains return the downloading torrent
+      if (existingTorrent == null ||
+          (existingTorrent !== null && existingTorrent.state == TorrentState.AWAITING_DOWNLOAD) ||
+          (existingTorrent !== null && existingTorrent.state == TorrentState.NEW)) {
+
+          log.debug("No existing torrent, starting and persisting now: ", torrent.torrentFileLink);
+          return transmissionService.startTorrent(torrent).then(function(response) {
+             return torrentService.populateTorrentWithResponseData(response);
+           });
+      } else {
+        log.debug("Torrent exists, checking state ", existingTorrent);
+  			if (existingTorrent.state == null) {
+          return transactionUtilsService.executeInTransactionWithResult(function(transaction) {
+
+            return torrentService.deleteTorrent(existingTorrent, true).then(function() {
+              torrent.guid = utilService.generateGuid();
+              return transmissionService.startTorrent(torrent).then(function(response) {
+                  return torrentService.populateTorrentWithResponseData(response);
+              });
+            });
+
+          });
+
+  			} else {
+  				// This torrent is already downloading or terminated
+          log.error("The provided torrent is already downloading or finished (duplicate): ", existingTorrent.torrentName);
+  				return null;
+  			}
+  		}
+    });
+	}
+
+  torrentService.delete = function(torrentHash) {
+      return Torrent.destroy({hash: torrentHash});
+  }
+
+  torrentService.deleteTorrent = function(torrentHash, deleteInTransmission) {
+     if (!deleteInTransmission) {
+       return torrentService.delete(torrentHash);
+     } else {
+       return transmissionService.cancelTorrent(torrentHash).then(function() {
+         return torrentService.delete(torrentHash);
+       });
+     }
+   }
+
+
+torrentService.populateTorrentWithResponseData = function(startTorrentResponse) {
+      if (startTorrentResponse == null) {
+        return {error: "Duplicate torrent"};
+      } else {
+        var filePath = startTorrentResponse.filePath;
+        var torrentResponse = startTorrentResponse.torrentResponse;
+        var torrentName = torrentResponse.name.replace('+','.');
+        torrentName = torrentName.replace(' ', '.');
+        var torrentHash = torrentResponse.hashString;
+        return torrentService.findByHash(torrentHash).then(function(existingTorrent) {
+          return createOrUpdateTorrentData(existingTorrent, torrentHash, torrentName, filePath);
+        });
+      }
+   }
+
+torrentService.saveTorrentWithState = function(torrent, torrentState) {
+  torrent.state = torrentState;
+  return torrentService.findByHash(torrent.hash).then(function(torrentFound) {
+    if (torrentFound == null) {
+      return torrentService.persistTorrent(torrent);
+    } else {
+      torrentFound.state = state;
+      return torrentFound.save();
+    }
+  });
+}
+
 // ----- PRIVATE ------------------------------------------------
+
+function createOrUpdateTorrentData(existingTorrent, torrentHash, torrentName, filePath) {
+  var torrent = {};
+  if (existingTorrent !== null) {
+    torrent = existingTorrent;
+    log.debug("Found torrent already in database with hash ", torrentHash, " - ", torrentName);
+  } else {
+    torrent.guid = utilService.generateGuid();
+    log.debug("Torrent not found, creating now");
+  }
+  torrent.hash = torrentHash;
+  torrent.dateStarted = moment.utc().toDate();
+
+  if (!torrent.torrentName) {
+    torrent.torrentName = torrentName;
+  }
+
+  if (!torrent.title || torrent.title === "Unknown") {
+    torrent.title = torrentName;
+  }
+
+  torrent.title = utilService.clearSpecialChars(torrent.title);
+  torrent.torrentName = utilService.clearSpecialChars(torrent.torrentName);
+  torrent.filePath = filePath;
+  log.debug("Saving torrent in state DOWNLOADING");
+  torrent.state = TorrentState.DOWNLOADING;
+  return torrentService.persistTorrent(torrent, TorrentState.DOWNLOADING);
+}
 
 function processSingleTorrentResponse(torrentResponse) {
 	var torrentHash = torrentResponse.hashString;
-  var findTorrent = torrentService.findTorrentByHash(torrentHash);
-  return findTorrent.then(createOrUpdateTorrent(torrentResponse, torrentHash));
+  var findTorrent = torrentService.findByHash(torrentHash);
+  return findTorrent.then(createOrUpdateTorrentClosure(torrentResponse, torrentHash));
 }
 
-function createOrUpdateTorrent(torrentResponse, torrentHash) {
+function createOrUpdateTorrentClosure(torrentResponse, torrentHash) {
   return function (existingTorrent) {
     if (existingTorrent === null) {
       log.debug("Torrent does not exist with hash: " + torrentHash + " -- creating now");
@@ -64,9 +215,9 @@ function createOrUpdateTorrent(torrentResponse, torrentHash) {
 
 function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
   var torrentState = existingTorrent.state;
-  var percentDone = torrentResponse.percentDone;
+  var percentDone = 100 * torrentResponse.percentDone;
   existingTorrent.magnetLink = torrentResponse.magnetLink;
-  var torrentName = existingTorrent.name;
+  var torrentName = existingTorrent.torrentName;
   var currentPercent = existingTorrent.percentDone;
 
   log.debug("[UPDATE-TORRENTS] Torrent response: ", torrentResponse.name,
@@ -133,17 +284,17 @@ function populateTorrentAndReturn(torrentResponse, torrent) {
     var percentDone = 100 * torrentResponse.percentDone;
     torrent.filePath = newLocation;
     torrent.guid = utilService.generateGuid();
-    torrent.name = torrentResponse.name;
+    torrent.torrentName = torrentResponse.name;
     torrent.dateStarted = moment.utc().toDate();
     torrent.finished = false;
 
     if (percentDone > 0 && percentDone < 100) {
       torrent.state = TorrentState.DOWNLOADING;
-      log.debug("[UPDATE-TORRENTS] Torrent ", torrent.name,
+      log.debug("[UPDATE-TORRENTS] Torrent ", torrent.torrentName,
                 " set as DOWNLOADING, percentDone ",percentDone);
     } else if (percentDone == 100) {
       torrent.state = TorrentState.DOWNLOAD_COMPLETED;
-      log.info("[UPDATE-TORRENTS] Torrent ", torrent.name, " finished downloading -- DOWNLOAD_COMPLETED");
+      log.info("[UPDATE-TORRENTS] Torrent ", torrent.torrentName, " finished downloading -- DOWNLOAD_COMPLETED");
       torrent.dateFinished = moment.utc().toDate();
       torrent.finished = true;
     }

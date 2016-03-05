@@ -1,6 +1,11 @@
 var fs        = require("fs");
 var path      = require("path");
+
+var cls = require('continuation-local-storage');
+var namespace = cls.createNamespace('request-local-storage');
+
 var Sequelize = require("sequelize");
+Sequelize.cls = namespace;
 
 //var config    = require(__dirname + '/../config/config.json')[env];
 var sequelize = new Sequelize('mysql://root:root@localhost:3306/tvster');

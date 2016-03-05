@@ -33,4 +33,40 @@ utilService.generateGuid = function() {
   return guid;
 }
 
+utilService.handleApiError = function(res) {
+  return function(error) {
+    res.status(500);
+    res.json({ status: 500, error: error});
+  }
+}
+
+utilService.generateErrorResponse = function(res, errorCode, statusCode, message) {
+  res.status(statusCode);
+  res.json({resultCode: errorCode, errorMessage: message});
+}
+
+utilService.clearSpecialChars = function(torrentName) {
+  torrentName = torrentName.replace("ñ","n");
+  torrentName = torrentName.replace("Ñ","N");
+  torrentName = torrentName.replace("á","a");
+  torrentName = torrentName.replace("é","e");
+  torrentName = torrentName.replace("í","i");
+  torrentName = torrentName.replace("ó","o");
+  torrentName = torrentName.replace("ú","u");
+  torrentName = torrentName.replace("Á","A");
+  torrentName = torrentName.replace("É","E");
+  torrentName = torrentName.replace("Í","I");
+  torrentName = torrentName.replace("Ó","O");
+  torrentName = torrentName.replace("Ú","U");
+  torrentName = torrentName.replace(" ",".");
+  torrentName = torrentName.replace("+",".");
+  torrentName = torrentName.replace("?",".");
+  log.debug("Cleared name is ", torrentName);
+  return torrentName;
+}
+
+utilService.isEmptyObject = function(object) {
+  return Object.keys(obj).length === 0 && JSON.stringify(obj) === JSON.stringify({});
+}
+
 module.exports = utilService;
