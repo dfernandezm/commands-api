@@ -14,7 +14,6 @@
     "uglify-js": "2.4.x",
     "coffee-script": "^1.9.1",
     "gulp": "~3.8.10",
-    "coffee-loader": "0.6.x",
     "gulp-coffee": ">=0.9",
     "gulp-util": ">=0.9",
     "gulp-coffeelint": ">=0.4.0",
@@ -27,6 +26,7 @@
     "prod": "gulp prod"
   },
   "dependencies": {
+    "lodash": "^4.6.1",
     "moment": "~2.10.2"
   }
 }
