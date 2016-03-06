@@ -7,6 +7,7 @@ var Promise = require('bluebird');
 var utilService = require('./utilService');
 var moment = require('moment');
 var _ = require('lodash');
+var torrentUtilsService = require('./torrentUtilsService');
 
 var torrentService = {}
 
@@ -18,14 +19,15 @@ torrentService.updateDataForTorrents = function() {
   log.debug("Updating torrents..");
   transmissionService.status().then(function(data) {
     var torrentsResponse = data.arguments.torrents;
-
-    Promise.map(torrentsResponse, function(torrentResponse) {
-      // Promise.map awaits for returned promises as well.
-      log.debug("Processing response for torrent hash: ", torrentResponse.hashString);
-      return processSingleTorrentResponse(torrentResponse);
-    }).then(function() {
-      console.log("Processed whole response!");
-    });
+    if (torrentsResponse.length == 0) {
+      utilService.stopInterval('torrentsStatus');
+    } else {
+      Promise.map(torrentsResponse, function(oneTorrentResponse) {
+        // Promise.map awaits for returned promises as well.
+        log.debug("Processing response for torrent hash: ", oneTorrentResponse.hashString);
+        return processSingleTorrentResponse(oneTorrentResponse);
+      });
+    }
   });
 }
 
@@ -88,43 +90,52 @@ torrentService.startTorrentDownload = function(torrent) {
 	var existingTorrentPromise = {};
   var torrentFileLink = torrent.torrentFileLink
   var magnetLink = torrent.magnetLink;
+  var link = null;
 
   if (torrentFileLink) {
     existingTorrentPromise = torrentService.findTorrentByFileLink(torrent.torrentFileLink)
-    log.debug("[TORRENT-API] Starting download from torrent file: ", torrentFileLink)
+    log.debug("[TORRENT-API] Starting download from torrent file: ", torrentFileLink);
+    link = torrentFileLink;
   } else if (magnetLink) {
     existingTorrentPromise = torrentService.findTorrentByMagnetLink(torrent.magnetLink);
     log.debug("[TORRENT-API] Starting download from torrent magnet: ", magnetLink);
+    link = magnetLink;
   }
 
-  return existingTorrentPromise.then(function(existingTorrent) {
-    // The promise chains return the downloading torrent
+  torrent.title = torrent.torrentName =
+    torrent.title || torrent.torrentName || torrentUtilsService.getNameFromMagnetLinkOrTorrentFile(link);
+
+  log.debug("Torrent title: ", torrent.title);
+
+  torrent.guid = utilService.generateGuid();
+  return existingTorrentPromise
+         .then(torrentService.startNewTorrentOrFail(torrent));
+}
+
+torrentService.startNewTorrentOrFail = function(newTorrent) {
+  return function(existingTorrent) {
+    // The promise chain return the downloading torrent
     if (existingTorrent == null ||
         (existingTorrent !== null && existingTorrent.state == TorrentState.AWAITING_DOWNLOAD) ||
         (existingTorrent !== null && existingTorrent.state == TorrentState.NEW)) {
 
-        log.debug("No existing torrent, starting and persisting now: ", torrent.torrentFileLink);
-        torrent.guid = utilService.generateGuid();
-        return torrentService.setAsDownloading(torrent);
+        log.debug("No existing torrent, starting and persisting now: ", newTorrent.torrentFileLink);
+        return torrentService.setAsDownloading(newTorrent);
     } else {
+
       log.debug("Torrent exists, checking state ", existingTorrent);
-			if (existingTorrent.state === null) {
-        return transactionUtilsService.executeInTransactionWithResult(function(transaction) {
-          return torrentService.deleteTorrent(existingTorrent, true).then(function() {
-            torrent.guid = utilService.generateGuid();
-            return transmissionService.startTorrent(torrent).then(function(response) {
-                return torrentService.populateTorrentWithResponseData(response);
-            });
-          });
-        });
-			} else {
-				// This torrent is already downloading or terminated
+      if (existingTorrent.state === null) {
+        return transactionUtilsService
+               .executeInTransactionWithResult(deleteAndRestartTorrentChain(existingTorrent, newTorrent));
+      } else {
+        // This torrent is already downloading or terminated
         var msg = "The provided torrent is already downloading or finished (duplicate): " + existingTorrent.torrentName;
+        torrentService.updateTorrentsStatus();
         log.error(msg);
-				throw { name: 'DUPLICATE_TORRENT', message: msg, status: 400};
-			}
-		}
-  });
+        throw { name: 'DUPLICATE_TORRENT', message: msg, status: 400};
+      }
+    }
+  }
 }
 
 torrentService.delete = function(torrentHash) {
@@ -142,7 +153,7 @@ torrentService.deleteTorrent = function(torrentHash, deleteInTransmission) {
 }
 
 torrentService.setAsDownloading = function(torrent) {
-  torrent.state = TorrentState.PENDING;
+  torrent.state = TorrentState.DOWNLOADING;
   torrent.title = torrent.torrentName;
   var persistTorrentPromise = torrentService.persistTorrent(torrent);
   // This executes asynchronously
@@ -184,6 +195,25 @@ torrentService.saveTorrentWithState = function(torrent, torrentState) {
 // -------------------------------- PRIVATE -----------------------------------
 
 /**
+* Returns a closure that is executed inside a transaction boundary.
+* What it does is first deleting the existing torrent and then restarting and
+* populating data in DB from the response.
+*
+*/
+function deleteAndRestartTorrentChain(existingTorrent, currentTorrent) {
+  return function(transaction) {
+    var startTorrentAgain = function ()  {
+      return transmissionService.startTorrent(currentTorrent);
+    };
+
+    return torrentService.deleteTorrent(existingTorrent, true)
+                  .then(startTorrentAgain)
+                  .then(torrentService.populateTorrentWithResponseData)
+                  .catch(handleErrorStartingTorrent(currentTorrent));
+  };
+}
+
+/**
 * Torrent failed to start, we need to update to FAILED
 */
 function handleErrorStartingTorrent(torrent) {
@@ -196,7 +226,6 @@ function handleErrorStartingTorrent(torrent) {
 
 function createOrUpdateTorrentData(existingTorrent, torrentHash, torrentName, filePath) {
   var torrent = {};
-
   torrent.hash = torrentHash;
   torrent.dateStarted = moment.utc().toDate();
   torrent.title = utilService.clearSpecialChars(torrentName);
@@ -212,7 +241,6 @@ function createOrUpdateTorrentData(existingTorrent, torrentHash, torrentName, fi
     torrent.title = torrentName;
   }
 
-  //TODO: start polling here, as it is the place where it is ready
   if (existingTorrent !== null) {
     _.extend(existingTorrent, torrent);
     log.debug("Found torrent already in database with hash ", torrentHash, " - ", torrentName);

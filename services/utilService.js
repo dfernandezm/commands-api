@@ -1,5 +1,6 @@
 var log = require('./logger');
 var uuid = require('node-uuid');
+var _ = require('lodash');
 
 var globalIntervals = {};
 var utilService = {};
