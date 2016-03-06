@@ -12,7 +12,7 @@ mod = angular
       # Pass in a function (Angular expression) which will be evaluated in the
       # parent scope of this directive (see template)
       # With this we decouple the actual action to update away from the
-      # directive itself, so we can re-use it in any controller
+      # directive itself, so we can re-use it
       updateAction: '&'
       deleteAction: '&'
     },

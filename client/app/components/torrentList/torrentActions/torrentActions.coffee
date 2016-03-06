@@ -8,12 +8,13 @@ mod = angular
         replace: true,
         transclude: true,
         scope: {
-          torrent: '='
+          torrent: '=',
+          onlyStart: '='
         },
         link: (scope) ->
           scopeUpdateClosures = {}
+
           scopeUpdateClosures.startLoading = ->
-            console.log("==== inside start loading ====")
             scope.loading = true
             return
 
