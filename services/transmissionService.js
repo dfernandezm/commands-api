@@ -98,6 +98,7 @@ transmissionService.startTorrentNow = function(torrentHash) {
                                  .then(returnResult));
 }
 
+//TODO: rename to deleteTorrent
 transmissionService.cancelTorrent = function(torrentHash) {
     return retry(MAX_TRIES, transmissionClient.torrentRemove({ids: [torrentHash],
                                                              'delete-local-data': true}))

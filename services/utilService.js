@@ -35,8 +35,8 @@ utilService.generateGuid = function() {
 
 utilService.handleApiError = function(res) {
   return function(error) {
-    res.status(500);
-    res.json({ status: 500, error: error});
+    res.status(error.status || 500);
+    res.json({ status: error.status || 500, error: error.message});
   }
 }
 

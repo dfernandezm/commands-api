@@ -9,5 +9,6 @@ torrentState.FETCHING_SUBTITLES = "FETCHING_SUBTITLES";
 torrentState.RENAMING = "RENAMING";
 torrentState.RENAMING_COMPLETED = "RENAMING_COMPLETED";
 torrentState.PAUSED = "PAUSED";
+torrentState.COMPLETED = "COMPLETED"
 
 module.exports = torrentState;
