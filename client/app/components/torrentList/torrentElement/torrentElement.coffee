@@ -24,7 +24,7 @@ mod = angular
             else if field is 'seeds'
               processedField = if torrent.seeds? then torrent.seeds + " seeds" else 'N/A'
             else if field is 'date'
-              processedField = moment(torrent.date, 'YYYY-MM-DD').format('YYYY-MM-DD')
+              processedField = moment(torrent.date).format('YYYY-MM-DD')
             else if field is 'title'
               processedField = torrent.title
             else
