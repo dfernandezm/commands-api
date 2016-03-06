@@ -28,26 +28,31 @@ transmissionService.startTorrent = function(torrent) {
   log.debug("About to start downloading torrent with link: ", torrentLink);
   return retry(MAX_TRIES, transmissionClient.torrentAdd({filename: torrentLink})).then(function(result) {
 
-     log.info("Result: " + JSON.stringify(result));
+     log.debug("Result: " + JSON.stringify(result));
 
      var resultJson = JSON.stringify(result);
      var resultNoHyphen = resultJson.replace('torrent-added','torrentAdded');
+     resultNoHyphen = resultNoHyphen.replace('torrent-duplicate','torrentDuplicate');
      var resultObject = JSON.parse(resultNoHyphen);
 
-     if (resultObject.result === "success") {
+     if (resultObject.result === "success" && resultObject.arguments.torrentDuplicate) {
+
+       log.warn("[TORRENT-START] Duplicate torrent detected: ", torrent);
+       throw {name: "DUPLICATED_TORRENT", message: 'Duplicate torrent detected', status: 400};
+     } else if (resultObject.result === "success" && resultObject.arguments.torrentAdded) {
+
        var torrentResponse = resultObject.arguments.torrentAdded;
        var torrentName = torrentResponse.name;
        var torrentHash = torrentResponse.hashString;
-       log.info("[TORRENT-API] Successfully started torrent: " + torrentHash);
+       log.info("[TORRENT-START] Successfully started torrent: ",torrentHash);
        return transmissionService.relocateAndRestart(torrentName, torrentHash).then(function(newPath) {
          log.debug("Returning torrent response: ", torrentResponse);
          return { torrentResponse: torrentResponse, filePath: newPath};
        });
-     } else if (resultObject.result === "torrent-duplicate") {
-       log.warn("[TORRENT-API] Duplicate torrent detected: " + torrentHash);
-       return transmissionService.cancelTorrent(torrentHash).then(function () {
-         return null;
-       });
+     } else {
+       var msg = "Unexpected response from transmission start call ";
+       log.error(msg, resultObject);
+       throw {name: "START_FAILED", message: msg, status: 500};
      }
   });
 }
@@ -121,7 +126,7 @@ transmissionService.returnErrorAndCancelTorrent = function(torrentHash) {
 }
 
 transmissionService.pauseTorrent = function(torrentHash) {
-  log.debug("Pausing torrent ", torrentHash);
+  log.debug("Pausing torrent in transmission: ", torrentHash);
   return retry(MAX_TRIES, transmissionClient.torrentStop({ids: [torrentHash]}));
 }
 
