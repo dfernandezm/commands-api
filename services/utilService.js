@@ -1,6 +1,10 @@
 var log = require('./logger');
 var uuid = require('node-uuid');
 var _ = require('lodash');
+var Promise = require('bluebird');
+Promise.onPossiblyUnhandledRejection(function(error){
+    throw error;
+});
 
 var globalIntervals = {};
 var utilService = {};
@@ -36,6 +40,7 @@ utilService.generateGuid = function() {
 
 utilService.handleApiError = function(res) {
   return function(error) {
+    log.debug("================== Called error handler");
     res.status(error.status || 500);
     res.json({ status: error.status || 500, error: error.message});
   }
@@ -68,6 +73,13 @@ utilService.clearSpecialChars = function(torrentName) {
 
 utilService.isEmptyObject = function(object) {
   return Object.keys(obj).length === 0 && JSON.stringify(obj) === JSON.stringify({});
+}
+
+utilService.jsonSerializer = function(key, value) {
+  if (value === null) {
+    return undefined;
+  }
+  return value;
 }
 
 module.exports = utilService;

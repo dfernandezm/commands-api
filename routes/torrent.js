@@ -25,20 +25,20 @@ router.post('/api/torrents/start', function(req, res) {
   }
 });
 
-router.get('/api/torrents/status', function(req, res) {
-  transmissionService.status().then(function(result) {
-      res.json({status: result});
-  });
+router.put('/api/torrents/status', function(req, res) {
+  torrentService.getCurrentStatus().then(function(result) {
+    var jsonResult = JSON.stringify(result, utilService.jsonSerializer);
+    res.json({torrents: JSON.parse(jsonResult)});
+  }).catch(utilService.handleApiError(res));
 });
 
-router.get('/api/torrents/cancel/:hash', function(req, res) {
+router.delete('/api/torrents/cancel/:hash', function(req, res) {
   var torrent = {};
   torrent.hash = req.params.hash;
-  log.info("The hash to cancel is " + torrent.hash);
-  transmissionService.cancelTorrent(torrent.hash).then(function(result) {
+  log.debug("Cancelling torrent: " + torrent.hash);
+  torrentService.deleteTorrent(torrent.hash, true).then(function(result) {
       res.json({result: result});
-  });
-
+  }).catch(utilService.handleApiError(res));
 });
 
 router.put('/api/torrents/pause/:hash', function(req, res) {
@@ -55,7 +55,13 @@ router.put('/api/torrents/resume/:hash', function(req, res) {
   }).catch(utilService.handleApiError(res));
 });
 
-// ------
+// ------ Testing, to be deleted from here
+
+router.get('/api/torrents/status', function(req, res) {
+  transmissionService.status().then(function(result) {
+      res.json({status: result});
+  });
+});
 
 router.get('/api/torrents/checkstatus', function(req, res) {
   torrentService.updateTorrentsStatus();

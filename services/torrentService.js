@@ -9,7 +9,45 @@ var moment = require('moment');
 var _ = require('lodash');
 var torrentUtilsService = require('./torrentUtilsService');
 
+//TODO: investigate this to propagate all errors
+// Promise.onPossiblyUnhandledRejection(function(error){
+//     throw error;
+// });
+
 var torrentService = {}
+
+torrentService.getCurrentStatus = function() {
+  var upperDate = moment().utc().toDate();
+  var lowerMoment = moment().utc();
+  lowerMoment.subtract(2, 'weeks');
+  var lowerDate = lowerMoment.toDate();
+
+  // select t from torrent
+  // where (dateStarted is not null and dateStarted between :lower and :upper)
+  // or state != 'COMPLETED'
+  var query = Torrent.findAll({
+    where: {
+      $or: {
+        dateStarted: {
+          $and: {
+            $ne: null,
+            $between: [lowerDate, upperDate]
+          }
+        },
+        state: {
+          $ne: 'COMPLETED'
+        }
+      }
+    },
+    order: [
+      ['dateStarted', 'DESC']
+    ]
+  });
+
+  return query;
+}
+
+
 
 torrentService.updateTorrentsStatus = function() {
   utilService.startNewInterval('torrentsStatus', torrentService.updateDataForTorrents, 4000);
@@ -138,8 +176,15 @@ torrentService.startNewTorrentOrFail = function(newTorrent) {
   }
 }
 
-torrentService.delete = function(torrentHash) {
-  return Torrent.destroy({hash: torrentHash});
+torrentService.delete = function(torrentHashOrGuid) {
+  return Torrent.destroy(
+                { where:
+                  { $or: {
+                     hash: torrentHashOrGuid,
+                     guid: torrentHashOrGuid
+                   }
+                  }
+                });
 }
 
 torrentService.deleteTorrent = function(torrentHash, deleteInTransmission) {
@@ -277,6 +322,11 @@ function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
   var torrentName = existingTorrent.torrentName;
   var currentPercent = existingTorrent.percentDone;
 
+  // bytes to Mb
+  var torrentSize = torrentResponse.totalSize || 0;
+  var torrentSizeMb = Math.round( (torrentSize / 1024) / 1024);
+  existingTorrent.size = existingTorrent.size || torrentSizeMb;
+
   log.debug("[UPDATE-TORRENTS] Torrent response: ", torrentResponse.name,
             " is DOWNLOADING, state read is ", torrentState, ", ",
             percentDone, '%');
@@ -299,7 +349,9 @@ function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
         log.debug("Torrent ", torrentName, " found in DB, setting as DOWNLOADING");
       }
 
-  } else if (percentDone >= 100 && (torrentState == TorrentState.DOWNLOADING || torrentState == null || torrentState == '')) {
+  } else if (percentDone >= 100 &&
+             (torrentState == TorrentState.DOWNLOADING || torrentState == null
+              || torrentState == '')) {
 
     existingTorrent.percentDone = 100;
     existingTorrent.state = TorrentState.DOWNLOAD_COMPLETED;
@@ -361,13 +413,7 @@ function populateTorrentAfterRelocation(torrentResponse, torrent) {
     torrent.percentDone = percentDone;
     torrent.magnetLink = torrentResponse.magnetLink;
 
-		return torrentService.persistTorrent(torrent).then(function(persistedTorrent) {
-      log.debug("Persisted torrent ", persistedTorrent);
-      if (finished) {
-        transmissionService.deleteTorrent()
-      }
-      return persistedTorrent;
-    });
+		return torrentService.persistTorrent(torrent);
   }
 }
 
