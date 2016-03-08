@@ -50,10 +50,11 @@ settingsService.updateSettings = function (settingsObject) {
 }
 
 settingsService.getDefaultTransmissionSettings = function() {
-  return TransmissionSettings.findById(1).then(function(ts) {
-    log.info("Successfully got transmission settings");
-    return ts;
-  })
+  return TransmissionSettings.findById(1);
+}
+
+settingsService.getDefaultMediacenterSettings = function() {
+  return MediacenterSettings.findById(1);
 }
 
 module.exports = settingsService;

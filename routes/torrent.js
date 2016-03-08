@@ -55,6 +55,13 @@ router.put('/api/torrents/resume/:hash', function(req, res) {
   }).catch(utilService.handleApiError(res));
 });
 
+router.put('/api/torrents/rename/:hash', function(req, res) {
+  var torrentHash = req.params.hash;
+  torrentService.renameTorrent(torrentHash).then(function(result) {
+    res.json({job: result});
+  }).catch(utilService.handleApiError(res));
+});
+
 // ------ Testing, to be deleted from here
 
 router.get('/api/torrents/status', function(req, res) {

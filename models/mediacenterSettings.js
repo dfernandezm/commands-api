@@ -27,7 +27,7 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true,
       field: 'is_remote'
     },
-    xbmcHosOrIp: {
+    xbmcHostOrIp: {
       type: DataTypes.STRING,
       allowNull: true,
       field: 'xbmc_host_or_ip'

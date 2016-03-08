@@ -91,7 +91,6 @@ proto.amcOptions = function(amcOptions) {
 }
 
 proto.defaultAmcOptions = function() {
-  this.customScript(this.options.amcScript);
   this.addArgument(filebotArgs.DEF_CLEAN, this.options.clean);
   this.addArgument(filebotArgs.DEF_SKIP_EXTRACT, this.options.skipExtract);
   this.addArgument(filebotArgs.DEF_UNSORTED, this.options.unsorted);

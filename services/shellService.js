@@ -1,6 +1,7 @@
 require('shelljs/global');
 var StatusMessage = require('../util/StatusMessage');
 var CommandStatus = require('../util/CommandStatus');
+var log = require('./logger');
 
 shellService = {}
 
@@ -24,6 +25,7 @@ shellService.executeWithCallback = function(execLine, callback) {
 }
 
 shellService.execute = function(execLine) {
+  log.debug('Executing command: ', execLine);
   var p = exec(execLine);
   var statusMessage = new StatusMessage();
   statusMessage.message = p.output;

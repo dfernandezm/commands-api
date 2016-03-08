@@ -3,3 +3,4 @@ npm-debug.log
 models-test
 docker-osx-dev-master
 .DS_Store
+*.tgz

@@ -109,8 +109,17 @@ torrentService.resumeTorrent = function(torrentHash) {
     torrent.hash = torrentHash;
     log.debug("Resuming torrent: ", torrentHash);
 	  torrent.state = TorrentState.DOWNLOADING;
+    process.nextTick(function () {
+      torrentService.updateTorrentsStatus();
+    });
 	  return torrentService.updateTorrentUsingHash(torrent);
 	});
+}
+
+torrentService.renameTorrent = function(torrentHash) {
+  return torrentService.findByHash(torrentHash).then(function(torrent) {
+    return filebotService.rename([torrent]);
+  });
 }
 
 torrentService.findTorrentByFileLink = function(fileLink) {

@@ -9,6 +9,11 @@ module.exports = function(sequelize, DataTypes) {
       primaryKey: true,
       field: 'job_id'
     },
+    guid: {
+      type: DataTypes.STRING,
+      field: 'guid',
+      allowNull: false
+    },
     jobType: {
       type: DataTypes.STRING,
       field: 'job_type',
