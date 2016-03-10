@@ -11,7 +11,7 @@ var jobService = require('./jobService');
 
 var AMC_SCRIPT_NAME = 'amc.groovy';
 
-filebotService = {}
+var filebotService = {}
 
 filebotService.existsFilebot = function () {
     return shellService.checkExecutable('filebot').status == CommandStatus.OK;
