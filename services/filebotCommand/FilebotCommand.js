@@ -94,6 +94,7 @@ proto.defaultAmcOptions = function() {
   this.addArgument(filebotArgs.DEF_CLEAN, this.options.clean);
   this.addArgument(filebotArgs.DEF_SKIP_EXTRACT, this.options.skipExtract);
   this.addArgument(filebotArgs.DEF_UNSORTED, this.options.unsorted);
+  this.addArgument(filebotArgs.DEF_XBMC, this.options.xbmcHostOrIp);
   return this;
 }
 
@@ -101,6 +102,46 @@ proto.contentLanguage = function(lang) {
   this.options.contentLanguage = lang;
   this.addArgument(filebotArgs.LANG, lang);
   return this;
+}
+
+proto.defaultTvShowsMoviesPattern = function() {
+  var tvShowsFormat = this.options.tvShowsFormat.replace('$TV_SHOWS_FOLDER', this.options.tvShowsFolderName);
+  var moviesFormat = this.options.moviesFormat.replace('$MOVIES_FOLDER', this.options.moviesFolderName);
+  var tvShowsAndMoviesPattern = util.format("\"%s\" \"%s\"", tvShowsFormat, moviesFormat);
+  this.addArgument(filebotArgs.DEF, tvShowsAndMoviesPattern);
+}
+
+proto.argumentsArray = function() {
+  var outputPart = this._generateArgumentPair(filebotArgs.OUTPUT);
+  var logfilePart = this._generateArgumentPair(filebotArgs.LOGFILE);
+  var actionPart = this._generateArgumentPair(filebotArgs.ACTION);
+  var inputPart = [this.options.strict, this.inputPath];
+  var langPart = this._generateArgumentPair(filebotArgs.LANG);
+  var arguments = [];
+  //TODO: different presets
+  if (this.commandType == CommandType.RENAME) {
+    customScriptPart = this._generateArgumentPair(filebotArgs.SCRIPT);
+    defParts = _.concat(this._generateArgumentPair(filebotArgs.DEF_CLEAN),
+               this._generateArgumentPair(filebotArgs.DEF_SKIP_EXTRACT),
+               this._generateArgumentPair(filebotArgs.DEF_UNSORTED),
+               this._generateArgumentPair(filebotArgs.DEF_XMBC));
+
+    var tvShowsFormat = this.options.tvShowsFormat.replace('$TV_SHOWS_FOLDER', this.options.tvShowsFolderName);
+    var moviesFormat = this.options.moviesFormat.replace('$MOVIES_FOLDER', this.options.moviesFolderName);
+
+    tvShowsAndMoviesPart = [filebotArgs.DEF, tvShowsFormat, moviesFormat];
+
+    arguments = _.concat(customScriptPart, outputPart,
+              logfilePart, actionPart, inputPart,
+              langPart, defParts, tvShowsAndMoviesPart);
+  }
+
+  console.log("Generated arguments array: " + arguments);
+  return arguments;
+}
+
+proto.executable = function() {
+  return this.options.executable;
 }
 
 // class methods
@@ -116,14 +157,16 @@ proto.generate = function() {
   var logfilePart = this._generateArgument(filebotArgs.LOGFILE);
   var actionPart = this._generateArgument(filebotArgs.ACTION);
   var inputPart = this.options.strict + " \"" + this.inputPath + "\"";
+  var langPart = this._generateArgument(filebotArgs.LANG);
 
   //TODO: different presets
   if (this.commandType == CommandType.RENAME) {
     customScriptPart = this._generateArgument(filebotArgs.SCRIPT) + " ";
     defParts = this._generateArgument(filebotArgs.DEF_CLEAN) + " " +
-                   this._generateArgument(filebotArgs.DEF_SKIP_EXTRACT) + " " +
-                   this._generateArgument(filebotArgs.DEF_UNSORTED) + " " +
-                   this._generateArgument(filebotArgs.DEF_XMBC);
+               this._generateArgument(filebotArgs.DEF_SKIP_EXTRACT) + " " +
+               this._generateArgument(filebotArgs.DEF_UNSORTED) + " " +
+               this._generateArgument(filebotArgs.DEF_XMBC);
+    defParts = defParts.replace("  ", " ");
 
     var tvShowsFormat = this.options.tvShowsFormat.replace('$TV_SHOWS_FOLDER', this.options.tvShowsFolderName);
     var moviesFormat = this.options.moviesFormat.replace('$MOVIES_FOLDER', this.options.moviesFolderName);
@@ -132,7 +175,7 @@ proto.generate = function() {
 
     command = initPart + " " + customScriptPart + " " + outputPart + " " +
               logfilePart + " " + actionPart + " " + inputPart + " " +
-              defParts + " " + tvShowsAndMoviesPart;
+              langPart + " " + defParts + " " + tvShowsAndMoviesPart;
   }
 
   console.log("Generated command: " + command);
@@ -142,17 +185,31 @@ proto.generate = function() {
 //TODO; this should be private
 proto._generateArgument = function (argumentName) {
   var argument = _.find(this.commandArguments, {argumentName : argumentName});
-  //console.log("generating: " + argumentName + " argument object " + argument);
 
   if(typeof argument !== "undefined") {
     //console.log(", cmdArg: " + argument.argumentName + ", val: " + argument.argumentValue);
-    if (_.startsWith(argumentName,'DEF')) {
+    if (_.startsWith(argumentName,filebotArgs.DEF)) {
         return argument.argumentName + argument.argumentValue;
     } else {
       return argument.argumentName + " " + argument.argumentValue;
     }
   } else {
     return "";
+  }
+}
+
+proto._generateArgumentPair = function(argumentName) {
+  var argument = _.find(this.commandArguments, {argumentName : argumentName});
+  if(typeof argument !== "undefined") {
+    //console.log(", cmdArg: " + argument.argumentName + ", val: " + argument.argumentValue);
+    if (_.startsWith(argumentName,filebotArgs.DEF)) {
+        var argumentName = argumentName.replace(filebotArgs.DEF, "");
+        return [filebotArgs.DEF, argumentName + argument.argumentValue];
+    } else {
+      return [argument.argumentName, argument.argumentValue];
+    }
+  } else {
+    return [];
   }
 }
 

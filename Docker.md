@@ -99,3 +99,7 @@ https://goldmann.pl/blog/2014/09/11/resource-management-in-docker/#_cpu
 ## Transmission in Docker
 
 https://github.com/firecat53/dockerfiles/tree/master/transmission
+
+## Plex
+* Mount first in docker-machine (already mounts )
+docker run -d  -v /Users/mediacenter:/media --net=host -p 32400:32400 --user root --privileged=true  plex-ms:latest

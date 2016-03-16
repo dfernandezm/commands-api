@@ -1,4 +1,4 @@
-var shellService = require('./shellService')
+var shellService = require('./shellService');
 var CommandStatus = require('../util/CommandStatus');
 var FilebotCommandType = require('../util/FilebotCommandType');
 var filebot = require('./filebotCommand/FilebotCommand');
@@ -8,14 +8,24 @@ var _ = require('lodash');
 var Promise = require('bluebird');
 var utilService = require('./utilService');
 var jobService = require('./jobService');
+var TorrentState = require('./torrentState');
+var torrentService = require('./torrentService');
+var filebotExecutor = require('./filebotCommand/filebotExecutor');
 
 var AMC_SCRIPT_NAME = 'amc.groovy';
 
-var filebotService = {}
+var filebotService = {};
+
+filebotService.renameTorrent = function(torrentHash) {
+  return torrentService.findByHash(torrentHash).then(function(torrent) {
+    log.debug("About to call service to rename...", torrent.torrentName);
+    return filebotService.rename([torrent]);
+  });
+}
 
 filebotService.existsFilebot = function () {
     return shellService.checkExecutable('filebot').status == CommandStatus.OK;
-}
+};
 
 filebotService.getFilebotInfo = function () {
   if (this.existsFilebot()) {
@@ -26,6 +36,7 @@ filebotService.getFilebotInfo = function () {
   }
 }
 
+// to be removed
 filebotService.testCommand = function() {
   var filebotCommand = filebot();
   filebotCommand.output("/tmp/test")
@@ -40,10 +51,10 @@ filebotService.testCommand = function() {
 }
 
 filebotService.createRenameCommand = function(renameCommandSpec) {
-  var filebotCommand = filebot();
-  filebotCommand.output(renameCommandSpec.outputPath)
+  var filebotCommand = filebot()
+                .output(renameCommandSpec.outputPath)
                 .customScript(renameCommandSpec.customScript)
-                .action("move")
+                .action(renameCommandSpec.action)
                 .input(renameCommandSpec.inputPath)
                 .contentLanguage(renameCommandSpec.language)
                 .logTo(renameCommandSpec.logFile)
@@ -51,6 +62,7 @@ filebotService.createRenameCommand = function(renameCommandSpec) {
 
   var outputCommand = filebotCommand.generate();
   log.debug("[FILEBOT-RENAME] The command is: ", outputCommand);
+  return filebotCommand;
 }
 
 /**
@@ -75,66 +87,102 @@ filebotService.prepareRename = function(torrentList) {
            var jobGuid = utilService.generateGuid();
 
            var renameTasks = [];
+           var updatingPromises = [];
            _.forEach(torrentList, function(torrent) {
                log.debug("Torrent ",  torrent);
-               var logFile = processingPath + '/rename_' + jobGuid +
+
+               if (torrent.state !== TorrentState.DOWNLOAD_COMPLETED) {
+                   log.warn('Torrent ', torrent.hash, ' is not in DOWNLOAD_COMPLETED, skipping...');
+               } else {
+
+                 var logFile = processingPath + '/rename_' + jobGuid +
                              "_" + torrent.hash + ".log";
-                log.debug("The log file is: ", logFile);
-               var filePath = torrent.filePath;
-               var contentLanguage = findLanguageFromTorrent(torrent);
-               var filebotRenameSpec = {
-                 outputPath: baseLibraryPath,
-                 inputPath: filePath,
-                 language: contentLanguage,
-                 action: 'move',
-                 xbmcHost: xbmcHostOrIp,
-                 customScript: amcScriptPath,
-                 logFile: logFile
-               }
+                 log.debug("The log file is: ", logFile);
+                 var filePath = torrent.filePath;
+                 var contentLanguage = findLanguageFromTorrent(torrent);
 
-               var renameTask = {
-                 command: filebotService.createRenameCommand(filebotRenameSpec),
-                 torrentHash: torrent.hash
-               }
+                 var filebotRenameSpec = {
+                   outputPath: baseLibraryPath,
+                   inputPath: filePath,
+                   language: contentLanguage,
+                   action: 'move',
+                   xbmcHost: xbmcHostOrIp,
+                   customScript: amcScriptPath,
+                   logFile: logFile
+                 }
+                 var cmd = filebotService.createRenameCommand(filebotRenameSpec);
+                 var renameTask = {
+                   command: cmd,
+                   torrentHash: torrent.hash,
+                   customAmc: true,
+                   processingPath: processingPath
+                 };
 
-               renameTasks.push(renameTask);
+                 log.debug("[FILEBOT-RENAME] Rename task command arguments: ", renameTask.command.argumentsArray());
+                 log.debug("[FILEBOT-RENAME] Rename task customAmc: ", renameTask.customAmc);
+                 log.debug("[FILEBOT-RENAME] Rename task hash: ", renameTask.torrentHash);
+                 log.debug("[FILEBOT-RENAME] Rename task processingPath: ", renameTask.processingPath);
+                 updatingPromises.push(setTorrentAsRenaming(torrent.hash));
+                 renameTasks.push(renameTask);
+               }
            });
 
-           return filebotService.startRenamer(renameTasks, jobGuid);
+           if (renameTasks.length > 0) {
+             return Promise.all(updatingPromises).then(function(updatedTorrents) {
+                 return filebotService.startRenamerJob(renameTasks, jobGuid);
+             });
+           } else {
+             log.warn("No torrents selected to rename -- it is likely renamer already started");
+             return { message: "No torrents selected to rename", state: "NOT_CREATED"};
+           }
          }).catch(function(err) {
            log.error("Error getting settings ", JSON.stringify(err));
-           //tODO: more verbose
+           //TODO: more verbose
            console.log("error ", err);
            throw err;
          });
 }
 
-filebotService.startRenamer = function(renameTasks, jobGuid) {
-  log.info("Received call to rename");
+filebotService.startRenamerJob = function(renameTasks, jobGuid) {
   log.debug("Creating job with GUID: ", jobGuid);
-  //TODO: check every torrent in correct state (DOWNLOAD_COMPLETED) and mark them as RENAMING 
   return jobService.createJob({guid: jobGuid, state: 'PROCESSING', jobType: 'RENAME'})
             .then(function(job) {
                log.info("Renamer job started with GUID: ", jobGuid);
                process.nextTick(function () {
                  log.debug(" ====== FILEBOT EXECUTOR ===== ");
-                 log.debug("Rename specs: ", renameTasks);
+                 log.debug("Rename specs ---> :", renameTasks);
+                 filebotExecutor.executeRenameTasks(renameTasks);
                });
                return job;
   });
 }
 
 filebotService.rename = function(torrentList) {
+  log.debug("About to rename...");
   return filebotService.prepareRename(torrentList).then(function(job) {
      log.debug("Renamer started! ", job);
      return job;
   }).catch(function (error) {
     log.error("Error occurred starting renamer: ", error);
     throw error;
-  })
+  });
+}
+
+//TODO: unused
+filebotService.setTorrentsAsRenaming = function(torrentHashes) {
+  _.forEach(torrentHashes, function(torrentHash) {
+    setTorrentAsRenaming(torrentHash);
+  });
 }
 
 // ===========================================================
+
+function setTorrentAsRenaming(torrentHash) {
+    return torrentService.findByHash(torrentHash).then(function(torrent) {
+        torrent.state = TorrentState.RENAMING;
+        return torrent.save();
+    });
+}
 
 function findLanguageFromTorrent(torrent) {
   var canonicalString = torrent.torrentFileLink || torrent.torrentName;
@@ -149,7 +197,6 @@ function findLanguageFromTorrent(torrent) {
 
   return "en";
 }
-
 
 
 module.exports = filebotService;

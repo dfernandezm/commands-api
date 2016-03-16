@@ -10,6 +10,7 @@
   "contentLanguage": "en",
   "unsorted": "y",
   "amcScript": "fn:amc",
+  "xbmcHostOrIp": "::1",
   "moviesFolderName": "Movies",
   "tvShowsFolderName": "TV Shows",
   "tvShowsFormat": "seriesFormat=$TV_SHOWS_FOLDER/{n.upperInitial()}/{'Season '+s}/{n.upperInitial()} {sxe.pad(2)} {t}",

@@ -40,7 +40,7 @@ utilService.generateGuid = function() {
 
 utilService.handleApiError = function(res) {
   return function(error) {
-    log.debug("================== Called error handler: ", error.message);
+    log.debug("===> Called API error handler: ", error.message);
     res.status(error.status || 500);
     res.json({ status: error.status || 500, error: error.message});
   }

@@ -2,6 +2,7 @@ var router = require('./router');
 var debug = require('debug')('tvster');
 var transmissionService = require('../services/transmissionService');
 var torrentService = require('../services/torrentService');
+var filebotService = require('../services/filebotService');
 var log = require('../services/logger');
 var utilService = require('../services/utilService');
 
@@ -57,7 +58,7 @@ router.put('/api/torrents/resume/:hash', function(req, res) {
 
 router.put('/api/torrents/rename/:hash', function(req, res) {
   var torrentHash = req.params.hash;
-  torrentService.renameTorrent(torrentHash).then(function(result) {
+  filebotService.renameTorrent(torrentHash).then(function(result) {
     res.json({job: result});
   }).catch(utilService.handleApiError(res));
 });

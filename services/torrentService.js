@@ -8,6 +8,7 @@ var utilService = require('./utilService');
 var moment = require('moment');
 var _ = require('lodash');
 var torrentUtilsService = require('./torrentUtilsService');
+var transactionUtilsService = require('./transactionUtilsService');
 
 //TODO: investigate this to propagate all errors
 // Promise.onPossiblyUnhandledRejection(function(error){
@@ -114,12 +115,6 @@ torrentService.resumeTorrent = function(torrentHash) {
     });
 	  return torrentService.updateTorrentUsingHash(torrent);
 	});
-}
-
-torrentService.renameTorrent = function(torrentHash) {
-  return torrentService.findByHash(torrentHash).then(function(torrent) {
-    return filebotService.rename([torrent]);
-  });
 }
 
 torrentService.findTorrentByFileLink = function(fileLink) {
@@ -271,7 +266,7 @@ torrentService.saveTorrentWithState = function(torrent, torrentState) {
     if (torrentFound == null) {
       return torrentService.persistTorrent(torrent);
     } else {
-      torrentFound.state = state;
+      torrentFound.state = torrentState;
       return torrentFound.save();
     }
   });
