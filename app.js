@@ -2,6 +2,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var app = express();
 var engine = require('ejs-mate');
+app.use('/materialize', express.static(__dirname + '/public/materialize'));
 app.use('/client', express.static(__dirname + '/public/client'));
 
 app.engine('ejs', engine);
