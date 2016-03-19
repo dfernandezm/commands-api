@@ -101,5 +101,38 @@ https://goldmann.pl/blog/2014/09/11/resource-management-in-docker/#_cpu
 https://github.com/firecat53/dockerfiles/tree/master/transmission
 
 ## Plex
-* Mount first in docker-machine (already mounts )
+
+* Mount first in docker-machine (`/Users` is mounted by default in OS X)
+```
 docker run -d  -v /Users/mediacenter:/media --net=host -p 32400:32400 --user root --privileged=true  plex-ms:latest
+```
+
+## Raspberry Pi
+
+Get Docker on the Raspberry Pi. These are steps for OSMC.
+
+* Install Hypriot Port of Docker
+```
+$ wget https://downloads.hypriot.com/docker-hypriot_1.10.3-1_armhf.deb
+$ sudo dpkg -i docker-hypriot_1.10.3-1_armhf.deb
+```
+
+* Add current user to `docker` group
+```
+$ sudo gpasswd -a ${USER} docker
+Adding user osmc to group docker
+```
+
+* Refresh group membership and restart Docker
+```
+$ newgrp docker
+$ sudo service docker restart
+```
+
+* Test Docker
+```
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+```
+
+Only images built for ARM work on the Rpi. The images need to built in the Pi itselt. Check [this](http://stackoverflow.com/questions/33970083/docker-build-rpi-image-on-mac) on info about creating the image in Mac.

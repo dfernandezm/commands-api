@@ -1,6 +1,6 @@
 var shellService = require('../shellService');
 var fs = require('fs');
-var log = require('../logger');
+var log = require('../fb-logger');
 var _ = require('lodash');
 var FILEBOT_SCRIPTS_PATH = __dirname + "/scripts";
 var spawn = require('child_process').spawn;
@@ -80,8 +80,7 @@ function symlinkCustomScripts(filebotScriptsPath, processingTempPath) {
     } catch(err) {
       log.debug("[FILEBOT-EXECUTOR] Error deleting symlinks -- this is because they did no exist previously: ",err);
     }
-
-
+    
     // Create symlinks
     fs.symlinkSync(filebotScriptsPath + "/amc.groovy",  amcScriptPath);
     fs.symlinkSync(filebotScriptsPath + "/cleaner.groovy",  cleanerScriptPath);
