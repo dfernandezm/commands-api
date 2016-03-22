@@ -4,7 +4,6 @@ var log = require('../fb-logger');
 var _ = require('lodash');
 var FILEBOT_SCRIPTS_PATH = __dirname + "/scripts";
 var spawn = require('child_process').spawn;
-//1. symlink custom scripts
 
 var filebotExecutor = {};
 
@@ -32,9 +31,6 @@ filebotExecutor.executeRenameTasks = function(renameTasks) {
 
 filebotExecutor.executeFilebotCommand = function(filebotCommand) {
   try {
-    // var filebotCommandArray = _.trim(filebotCommand).split(' ');
-    // var executable = _.head(filebotCommandArray);
-    // var arguments = _.tail(filebotCommandArray);
     var executable = filebotCommand.executable();
     var arguments = filebotCommand.argumentsArray();
     arguments = _.pull(arguments, "");
@@ -51,11 +47,11 @@ filebotExecutor.startMonitoringFilebotProcess = function(filebotProcess) {
  process.nextTick(function() {
    log.debug("Setting process stream handlers");
    filebotProcess.stdout.on('data', function (data) {
-     log.info('[FILEBOT-COMMAND] Output: ' + data);
+     log.info('[FILEBOT-COMMAND]: ' + data);
    });
 
    filebotProcess.stderr.on('data', function (data) {
-     log.warn('[FILEBOT-COMMAND] Err Output: ' + data);
+     log.warn('[FILEBOT-COMMAND-ERROR]: ' + data);
    });
 
    filebotProcess.on('exit', function (exitCode) {
@@ -78,7 +74,7 @@ function symlinkCustomScripts(filebotScriptsPath, processingTempPath) {
       fs.unlinkSync(cleanerScriptPath);
       fs.unlinkSync(libScriptsPath);
     } catch(err) {
-      log.debug("[FILEBOT-EXECUTOR] Error deleting symlinks -- this is because they did no exist previously: ",err);
+      log.debug("[FILEBOT-EXECUTOR] Error deleting symlinks -- this is because they did no exist previously: ", err);
     }
     
     // Create symlinks

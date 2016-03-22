@@ -12,3 +12,6 @@ TVster is private PVR organizer written in NodeJS which aims at easily get, orga
 - Get content straight into your Media Center: All the downloaded content gets added and refreshed on your configured media center ([Kodi](http://kodi.tv)). [Transmission](www.transmissionbt.com/) is used for downloads.
 - Follow and track your favourite TV Shows: subscribe to airing TV Shows, configure quality and language and get them directly as they air (thanks to [Trakt](http://trakt.tv))
 - Get recent TV Shows and Movies releases: Get the latest additions of TV Shows and Movies
+
+
+# Deployment with [Shipit](https://github.com/shipitjs/shipit)

@@ -33,8 +33,8 @@ settingsService.updateSettings = function (settingsObject) {
   }).then(function (result) {
     // Transaction has been committed
     // result is whatever the result of the promise chain returned to the transaction callback
-    console.log("committed transaction to update settings", result);
-
+    log.debug("committed transaction to update settings", result);
+    
     // The chain is here resolved to the result of the promise in the chain --
     // we collect here the result to returned to the 'then' part of the caller
     return result;

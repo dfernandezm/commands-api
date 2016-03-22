@@ -7,7 +7,7 @@ var namespace = cls.createNamespace('request-local-storage');
 var Sequelize = require("sequelize");
 Sequelize.cls = namespace;
 
-var env = 'development';
+var env = 'staging';
 var config    = require(__dirname + '/../config/config.json')[env];
 var sequelize = new Sequelize(config.url);
 //var sequelize = new Sequelize('mysql://root:root@localhost:3306/tvster');

@@ -2,5 +2,9 @@
   "development": {
     "dialect" : "mysql",
     "url": "mysql://root:root@192.168.99.100:3308/tvster"
+  },
+  "staging": {
+    "dialect" : "mysql",
+    "url": "mysql://root:root@localhost:3306/tvster"
   }
 }

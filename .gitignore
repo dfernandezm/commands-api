@@ -4,3 +4,9 @@ models-test
 docker-osx-dev-master
 .DS_Store
 *.tgz
+.idea/jsLibraryMappings.xml
+.idea/modules.xml
+.idea/tvster.iml
+.idea/vcs.xml
+.idea/workspace.xml
+.idea/libraries/tvster_node_modules.xml
