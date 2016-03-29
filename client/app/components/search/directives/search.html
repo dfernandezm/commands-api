@@ -1,47 +1,49 @@
 <div class="searchTorrentsPage container">
-   <div class="row">
-     <h3>Search content</h1>
-	 </div>
+    <div class="row">
+        <h3>Search content</h1>
+    </div>
 
-    	<div class="row">
-         <form class="col s12">
+    <div class="row">
+        <form class="col s12">
 
             <div ng-show="selectedSite.id !== 'LINK'" class="input-field col s12">
-              <input id="search" type="search" class="col s11" ng-model="query" placeholder="Search...">
-              <button ng-show="!loading" class="btn waves-effect waves-light col s1" type="submit" name="action">
-                <i class="material-icons">search</i>
-              </button>
-              <div ng-show="loading" class="preloader-wrapper small active">
-                  <div class="spinner-layer spinner-green-only">
-                    <div class="circle-clipper left">
-                      <div class="circle"></div>
-                    </div><div class="gap-patch">
-                      <div class="circle"></div>
-                    </div><div class="circle-clipper right">
-                      <div class="circle"></div>
+                <input id="search" type="search" class="col s11" ng-model="query" placeholder="Search...">
+                <button ng-show="!loading" class="btn waves-effect waves-light col s1" type="submit" name="action">
+                    <i class="material-icons">search</i>
+                </button>
+                <div ng-show="loading" class="preloader-wrapper small active">
+                    <div class="spinner-layer spinner-green-only">
+                        <div class="circle-clipper left">
+                            <div class="circle"></div>
+                        </div>
+                        <div class="gap-patch">
+                            <div class="circle"></div>
+                        </div>
+                        <div class="circle-clipper right">
+                            <div class="circle"></div>
+                        </div>
                     </div>
-                  </div>
-              </div>
+                </div>
             </div>
 
-           <torrent-single-download ng-show="selectedSite.id == 'LINK'" />
-       </form>
-    	</div>
+            <torrent-single-download ng-show="selectedSite.id == 'LINK'"/>
+        </form>
+    </div>
 
     <div class="row col s10">
-      <div class="col s3" ng-repeat="site in searchSites">
-        <input type="checkbox" ng-model="site.selected" ng-change="checkSingleDownload(site)" id="[[site.name]]">
-        <label for="[[site.name]]">[[site.name]]</label>
-      </div>
+        <div class="col s3" ng-repeat="site in searchSites" ng-hide="site.hide">
+            <input type="checkbox" ng-model="site.selected" ng-change="checkSingleDownload(site)" id="[[site.name]]">
+            <label for="[[site.name]]">[[site.name]]</label>
+        </div>
     </div>
 
 
-	  <div class="row-fluid search-results" ng-show="searchFinished">
-	    <div class="col-lg-12 ng-cloak">
-	       <h4>Results for: '[[query]]'</h4>
-	       <h5>[[offset+1]]-[[currentOffset]] of [[total]]</h5>
-         <torrents-elements torrents="torrents" style="COMPACT" show-progress="false" />
-		  </div>
+    <div class="row-fluid search-results" ng-show="searchFinished">
+        <div class="col-lg-12 ng-cloak">
+            <h4>Results for: '[[query]]'</h4>
+            <h5>[[offset+1]]-[[currentOffset]] of [[total]]</h5>
+            <torrents-elements torrents="torrents" style="COMPACT" show-progress="false"/>
+        </div>
     </div>
 
 </div>

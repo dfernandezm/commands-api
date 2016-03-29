@@ -1,4 +1,7 @@
 <div class="input-field col s12">
-  <input type="text" class="col s11"  ng-model="magnetOrTorrentLink" ng-blur="populateTorrent()" placeholder="Paste link...">
-  <torrent-actions torrent="torrent" only-start="true" />
+    <input type="text" class="col s9" ng-model="magnetOrTorrentLink" ng-blur="populateTorrent()"
+           placeholder="Paste link...">
+  <div class="col s3">
+    <torrent-actions torrent="torrent" only-start="true"/>
+  </div>
 </div>

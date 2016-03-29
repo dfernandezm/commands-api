@@ -23,7 +23,14 @@ mod = angular
             return
 
           scope.startDownload = (torrentDefinition) ->
-            torrentService.startDownload(torrentDefinition, scopeUpdateClosures)
+            scope.loading = true
+            setTimeout( ->
+              console.log 'Starting'
+              scope.loading = false
+              return
+            ,3000);
+
+            #torrentService.startDownload(torrentDefinition, scopeUpdateClosures)
             return
 
           scope.pauseDownload = (torrentDefinition) ->

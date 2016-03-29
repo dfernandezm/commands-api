@@ -1,5 +1,6 @@
 searchApi = require '../searchApi'
 searchUtils = require '../services/searchUtils'
+_ = require 'lodash'
 
 template = require './search.html'
 mod = angular
@@ -21,8 +22,20 @@ mod = angular
             console.log ("Changed to " + site.id + ", selected " + site.selected)
             if site.selected and site.id == 'LINK'
               scope.selectedSite = site
+              hideSites(true) # hide others
             else
               scope.selectedSite = undefined
+              hideSites(false) # show others
+            return
+
+          hideSites = (hideOrShow) ->
+            _.each(scope.searchSites, (element, index) ->
+              if element.id != 'LINK'
+                element.hide = hideOrShow
+              else
+                element.hide = false
+              return
+            )
             return
 
           scopeUpdateClosures.success = (torrentsInfo) ->
