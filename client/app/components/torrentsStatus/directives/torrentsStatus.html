@@ -1,20 +1,29 @@
-<div class="torrentsStatusPage container-fluid">
-   <div class="row-fluid clearfix">
+<div class="torrentsStatusPage">
+   <div class="row">
 	     <h1 class="page-header">Downloads status</h1>
-	 </div>
+   </div>
 
-  <div class="row-fluid search-results clearfix ng-cloak" role="tabpanel">
-    <tabset>
-      <tab heading="Active" active="true">
+  <div class="row search-results ng-cloak">
+    <div class="col s12">
+        <ul class="tabs">
+            <li class="tab col s4"><a href="#active" class="active">Active</a></li>
+            <li class="tab col s4"><a href="#awaiting">Awaiting Download</a></li>
+            <li class="tab col s4"><a href="#completed">Completed</a></li>
+        </ul>
+    </div>
+    <div id="active" class="col s12">
+        aaa
         <torrents-elements style="COMPACT" torrents="torrents" show-progress="true" filter-state="DOWNLOADING,PAUSED,DOWNLOAD_COMPLETED,RENAMING,RENAMING_COMPLETED,FETCHING_SUBTITLES" />
-      </tab>
-      <tab heading="Awaiting download">
+    </div>
+    <div id="awaiting" class="col s12">
+        bbbb
         <torrents-elements style="COMPACT" torrents="torrents" filter-state="AWAITING_DOWNLOAD" />
-      </tab>
-      <tab heading="Completed">
-        <torrents-elements style="COMPACT" torrents="torrents" filter-state="COMPLETED,FAILED,FAILED_DOWNLOAD_ATTEMPT" />
-      </tab>
-    </tabset>
+    </div>
+    <div id="completed" class="col s12">
+        ccc
+        <torrents-elements style="COMP" torrents="torrents" filter-state="COMPLETED,FAILED,FAILED_DOWNLOAD_ATTEMPT" />
+    </div>
+
   </div>
 
 </div>
