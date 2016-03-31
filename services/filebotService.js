@@ -168,13 +168,6 @@ filebotService.rename = function(torrentList) {
   });
 }
 
-//TODO: unused
-filebotService.setTorrentsAsRenaming = function(torrentHashes) {
-  _.forEach(torrentHashes, function(torrentHash) {
-    setTorrentAsRenaming(torrentHash);
-  });
-}
-
 // ===========================================================
 
 function setTorrentAsRenaming(torrentHash) {

@@ -48,8 +48,6 @@ torrentService.getCurrentStatus = function() {
   return query;
 }
 
-
-
 torrentService.updateTorrentsStatus = function() {
   utilService.startNewInterval('torrentsStatus', torrentService.updateDataForTorrents, 4000);
 }
@@ -59,6 +57,7 @@ torrentService.updateDataForTorrents = function() {
   transmissionService.status().then(function(data) {
     var torrentsResponse = data.arguments.torrents;
     if (torrentsResponse.length == 0) {
+      log.debug("Torrent response from transmission is empty -- no torrents added or downloading");
       utilService.stopInterval('torrentsStatus');
     } else {
       Promise.map(torrentsResponse, function(oneTorrentResponse) {
@@ -71,7 +70,8 @@ torrentService.updateDataForTorrents = function() {
 }
 
 torrentService.findByHash = function(torrentHash) {
-  return Torrent.findOne({ where: {hash: torrentHash} }); // returns the torrent found or null
+  //noinspection JSUnresolvedFunction
+    return Torrent.findOne({ where: {hash: torrentHash} }); // returns the torrent found or null
 }
 
 torrentService.stopTorrentsStatus = function() {
@@ -270,6 +270,15 @@ torrentService.saveTorrentWithState = function(torrent, torrentState) {
       return torrentFound.save();
     }
   });
+}
+
+torrentService.completeTorrentRename = function (completedRename) {
+    return torrentService.findByHash(completedRename.torrentHash).then((torrent) => {
+        torrent.renamedPath = completedRename.renamedPath;
+        torrent.state = TorrentState.RENAMING_COMPLETED;
+        //TODO: Mark the job as completed
+        return torrent.save();
+    });
 }
 
 // -------------------------------- PRIVATE -----------------------------------

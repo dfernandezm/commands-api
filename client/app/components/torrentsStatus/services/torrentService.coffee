@@ -37,7 +37,7 @@ module.exports = mod = ($http, $timeout) ->
       url = resumeUrl + "/" + torrent.hash
       res = $http.put(url)
     else if action is "RENAME"
-      url = renameUrl
+      url = renameUrl + "/" + torrent.hash
       res = $http.put(url)
     else if action is "SUBTITLES"
       url = subtitlesUrl
