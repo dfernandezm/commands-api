@@ -32,16 +32,27 @@ To properly enable file sharing between the Docker VM and your system, use the t
 
 * Once `docker-osx-dev` has started sharing you desired directory, open a new tab, move to your shared folder and start a container there:
   ```
-  docker run -v $(pwd):/tvster -p 3000:3000 -p 3308:3306 -it dfernandez/tvster:latest /bin/bash
+  $ docker run -v $(pwd):/tvster -p 3000:3000 -p 3308:3306 -p 5858:5858 -it dfernandez/tvster:latest /bin/bash
+  $ cd /tvster/docker && start-services.sh
   ```
 
   The previous command starts a container from the image `dfernandez/tvster:latest` in interactive mode (`-i`). It shares the current directory
   as a volume called `/tvster` inside the container. When launching, the container will start Apache, Transmission and MySQL apart from running
-  `nodemon` on the shared folder to automatically start the app.
+  `nodemon` on the shared folder to automatically start the app, if no extra command is provided after the name of the image.
+
+* Run `nodemon` in debug mode from inside the container
+```
+$ cd /tvster
+$ nodemon --debug bin/www --watch
+```
+
+After this you can connect Webstorm through a debug configuration using the `docker-machine` IP and port `5858`
+
+
 
 # Useful Docker commands
 
-## Delete old containers / images
+## Delete old containers and images
 ```
 docker ps -a | grep 'minutes ago' | awk '{print $1}' | xargs docker rm
 docker images | grep 'minutes ago' | awk '{print $3}' | xargs docker rmi
