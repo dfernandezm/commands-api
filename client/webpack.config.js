@@ -20,7 +20,10 @@ module.exports = {
     filename: '[name].js'
   },
    plugins: [
-    new webpack.ContextReplacementPlugin(/moment[\/\\]locale$/, /de|fr|hu/)
+       new webpack.ContextReplacementPlugin(/moment[\/\\]locale$/, /de|fr|hu/)
+       //, new webpack.ProvidePlugin({
+       //     'window.jQuery': 'jquery'
+       // })
     ],
   resolve: {
             alias: {

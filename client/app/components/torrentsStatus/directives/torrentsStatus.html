@@ -1,29 +1,27 @@
 <div class="torrentsStatusPage">
-   <div class="row">
-	     <h1 class="page-header">Downloads status</h1>
-   </div>
-
-  <div class="row search-results ng-cloak">
-    <div class="col s12">
-        <ul class="tabs">
-            <li class="tab col s4"><a href="#active" class="active">Active</a></li>
-            <li class="tab col s4"><a href="#awaiting">Awaiting Download</a></li>
-            <li class="tab col s4"><a href="#completed">Completed</a></li>
-        </ul>
-    </div>
-    <div id="active" class="col s12">
-        aaa
-        <torrents-elements style="COMPACT" torrents="torrents" show-progress="true" filter-state="DOWNLOADING,PAUSED,DOWNLOAD_COMPLETED,RENAMING,RENAMING_COMPLETED,FETCHING_SUBTITLES" />
-    </div>
-    <div id="awaiting" class="col s12">
-        bbbb
-        <torrents-elements style="COMPACT" torrents="torrents" filter-state="AWAITING_DOWNLOAD" />
-    </div>
-    <div id="completed" class="col s12">
-        ccc
-        <torrents-elements style="COMP" torrents="torrents" filter-state="COMPLETED,FAILED,FAILED_DOWNLOAD_ATTEMPT" />
+    <div class="row">
+        <h3>Downloads status</h3>
     </div>
 
-  </div>
+    <div class="row search-results ng-cloak">
+        <div class="col s12">
+            <ul class="tabs" tabs>
+                <li class="tab col s3"><a href="#actived" class="active">Active</a></li>
+                <li class="tab col s3"><a href="#awaiting">Awaiting download</a></li>
+                <li class="tab col s3"><a href="#completed">Completed</a></li>
+            </ul>
+        </div>
+        <div id="actived" class="col s12">
+            <torrents-elements style="COMPACT" torrents="torrents" show-progress="true"
+                               filter-state="DOWNLOADING,PAUSED,DOWNLOAD_COMPLETED,RENAMING,RENAMING_COMPLETED,FETCHING_SUBTITLES"/>
+        </div>
+        <div id="awaiting" class="col s12">
+            <torrents-elements style="COMPACT" torrents="torrents" filter-state="AWAITING_DOWNLOAD"/>
+        </div>
+        <div id="completed" class="col s12">
+            <torrents-elements style="COMPACT" torrents="torrents"
+                               filter-state="COMPLETED,FAILED,FAILED_DOWNLOAD_ATTEMPT"/>
+        </div>
+    </div>
 
 </div>
