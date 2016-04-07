@@ -5,89 +5,134 @@ var _ = require('lodash');
 var FILEBOT_SCRIPTS_PATH = __dirname + "/scripts";
 var spawn = require('child_process').spawn;
 var torrentService = require('../torrentService');
+var TorrentState = require('../torrentState');
 
-var pathMovedPattern = /\[TEST\]\s+Rename\s+(.*)to\s+\[(.*)\]/;
+// Filebot response
+var pathMovedPattern = /\[MOVE\]\s+Rename\s+(.*)to\s+\[(.*)\]/;
 var pathSkippedPattern = /Skipped\s+\[(.*)\]\s+because\s+\[(.*)\]/;
 var hashRegex = /_([\w]{40})/;
 
 var filebotExecutor = {};
 
-var completedProcesses = {};
+filebotExecutor.executeRenameTasks = function (renameTasks) {
 
-filebotExecutor.executeRenameTasks = function(renameTasks) {
-  var symlinkDone = false;
-  log.debug("[FILEBOT-EXECUTOR] About to execute rename tasks");
-   _.forEach(renameTasks, function(renameTask) {
-     log.debug("[FILEBOT-EXECUTOR] Executing rename command task for torrent: ", renameTasks.torrentHash);
-     if (renameTask.customAmc && !symlinkDone) {
-       log.debug("[FILEBOT-EXECUTOR] Symlinking custom AMC scripts...");
-       symlinkCustomScripts(FILEBOT_SCRIPTS_PATH, renameTask.processingPath);
-       symlinkDone = true;
-     }
-     var filebotCommand = renameTask.command;
-     log.debug("[FILEBOT-EXECUTOR] Executing filebotCommand: ", filebotCommand);
-     var filebotProcess = filebotExecutor.executeFilebotCommand(filebotCommand);
+    log.debug("[FILEBOT-EXECUTOR] Executing rename tasks", renameTasks);
+    var filebotProcessingPath = renameTasks[0].processingPath;
+    var symlinkDone = existCustomScriptsSymlinks(filebotProcessingPath);
 
-     if (filebotProcess !== null) {
-        filebotExecutor.startMonitoringFilebotProcess(filebotProcess, renameTask.torrentHash);
-     } else {
-       log.error("Error occurred spawning Filebot process for command: ", filebotCommand);
-     }
-   });
-}
+    _.forEach(renameTasks, function (renameTask) {
+        log.debug("[FILEBOT-EXECUTOR] Executing rename command task for torrent: ", renameTasks.torrentHash);
 
-filebotExecutor.executeFilebotCommand = function(filebotCommand) {
-  try {
-    var executable = filebotCommand.executable();
-    var arguments = filebotCommand.argumentsArray();
-    arguments = _.pull(arguments, "");
-    log.debug("[FILEBOT-EXECUTOR] Executing ", executable, " with arguments: ", arguments);
-    return spawn(executable, arguments);
-  } catch (err) {
-      log.error("Error occurred spawning Filebot process ", err);
-      return null;
-  }
-}
+        if (renameTask.customAmc && !symlinkDone) {
+            log.debug("[FILEBOT-EXECUTOR] Symlinking custom AMC scripts...");
+            symlinkCustomScripts(FILEBOT_SCRIPTS_PATH, filebotProcessingPath);
+            symlinkDone = true;
+        }
 
-filebotExecutor.startMonitoringFilebotProcess = function(filebotProcess, torrentHash) {
- process.nextTick(function() {
-   filebotProcess.stdout.on('data', function (data) {
-       // log.info('[FILEBOT-COMMAND]: ' + data);
-       var dataStr = data.toString();
-       var match = pathMovedPattern.exec(dataStr);
+        var filebotCommand = renameTask.command;
+        log.debug("[FILEBOT-EXECUTOR] Executing Filebot command: ", filebotCommand);
+        var filebotProcess = filebotExecutor.executeFilebotCommand(filebotCommand);
 
-       if (match !== null && match.length > 1) {
-           var originalPath = match[1];
-           var renamedPath = match[2];
-           log.debug("[FILEBOT-COMMAND-RENAME-DETECTED] " + dataStr);
-           log.debug("[FILEBOT-COMMAND-RENAME-DETECTED] " + originalPath + " --> " + renamedPath);
+        if (filebotProcess !== null) {
+            filebotExecutor.startMonitoringFilebotProcess(filebotProcess, renameTask.torrentHash);
+        } else {
+            log.error("Error occurred spawning Filebot process for command: ", filebotCommand);
+        }
+    });
+};
 
-           completedProcesses[torrentHash] = {  type: 'RENAME', torrentHash: torrentHash,
-                                                original: originalPath, renamedPath: renamedPath };
+filebotExecutor.executeFilebotCommand = function (filebotCommand) {
+    try {
+        var executable = filebotCommand.executable();
+        var arguments = filebotCommand.argumentsArray();
+        arguments = _.pull(arguments, "");
+        log.debug("[FILEBOT-EXECUTOR] Executing ", executable, " with arguments: ", arguments);
+        return spawn(executable, arguments);
+    } catch (err) {
+        log.error("Error occurred spawning Filebot process ", err);
+        return null;
+    }
+};
 
-       } else {
-           log.debug("[FILEBOT-COMMAND-RENAMING] " + dataStr);
-       }
-   });
+filebotExecutor.startMonitoringFilebotProcess = function (filebotProcess, torrentHash) {
 
-   filebotProcess.stderr.on('data', function (data) {
-     log.warn('[FILEBOT-COMMAND-ERROR]: ' + data);
-   });
+    // Give the chance to run other tasks by deferring process listeners
+    process.nextTick(function () {
 
-   filebotProcess.on('exit', function (exitCode) {
-       log.info("Process exited with code: " + exitCode);
-       if (exitCode == 0) {
-           log.info("[FILEBOT-COMMAND-FINISHED] Successful renamed torrent hash: " + torrentHash);
-           //TODO: DOES NOT WORK, completedRename is undefined!!
-           var completedRename = completedProcesses[torrentHash];
-           if (fs.accessSync(completedRename.renamedPath)) {
-               torrentService.completeTorrentRename(completedRename);
-           }
-       } else {
-           log.info("[FILEBOT-COMMAND-ERRORED] Exited with code: " + exitCode);
-       }
-   });
- });
+        var completedRenames = {};
+        completedRenames[torrentHash] = [];
+
+        filebotProcess.stdout.on('data', function (data) {
+
+            var dataStr = data.toString('utf8');
+
+            log.debug("[FB] " + dataStr);
+
+            var match = pathMovedPattern.exec(dataStr);
+            if (match !== null && match.length > 1) {
+                var originalPath = match[1];
+                var renamedPath = match[2];
+
+                log.debug("[FILEBOT-COMMAND-RENAME-DETECTED] ${originalPath}  -->  ${renamedPath}");
+
+                completedRenames[torrentHash].push({
+                    type: 'RENAME',
+                    torrentHash: torrentHash,
+                    original: originalPath,
+                    renamedPath: renamedPath
+                });
+
+            } else {
+                log.debug("[FILEBOT-COMMAND-RENAMING] " + dataStr);
+            }
+        });
+
+        filebotProcess.stderr.on('data', function (data) {
+            log.warn('[FILEBOT-COMMAND-ERROR]: ' + data);
+        });
+
+        filebotProcess.on('close', function (exitCode) {
+
+            log.info("Filebot Process exited with code: " + exitCode);
+
+            if (exitCode == 0) {
+                log.info(`[FILEBOT-FINISHED] Successful renamed torrent hash ${torrentHash}`);
+                log.info("[FILEBOT-FINISHED] Completed renames: ", JSON.stringify(completedRenames));
+
+                var completedRenamesForTorrent = completedRenames[torrentHash];
+                var renamedPaths = [];
+                var renamedError = false;
+
+                _.forEach(completedRenamesForTorrent, (completedRename) => {
+
+                    try {
+                        fs.accessSync(completedRename.renamedPath);
+                        renamedPaths.push(completedRename.renamedPath);
+                    } catch (err) {
+                        log.warn("Renamed file does not exist: " + completedRename.renamedPath +
+                            ", mark to set torrent with hash ${torrentHash} back to DOWNLOAD_COMPLETED", err);
+                        // Put back to download completed
+                        renamedError = true;
+                    }
+                });
+
+                if (!renamedError) {
+                    log.info("Complete renaming for torrent ${torrentHash} -- RENAMING_COMPLETED");
+                    return torrentService.completeTorrentRename(torrentHash, renamedPaths.join(';'));
+                } else {
+                    log.warn("Setting torrent ${torrentHash} back to DOWNLOAD_COMPLETED");
+                    return torrentService.saveTorrentWithStateUsingHash(torrentHash, TorrentState.DOWNLOAD_COMPLETED);
+                }
+
+            } else {
+
+                log.info("[FILEBOT-COMMAND-ERRORED] Exited with code: " + exitCode);
+
+                // Put back to download completed
+                return torrentService.saveTorrentWithStateUsingHash(torrentHash, TorrentState.DOWNLOAD_COMPLETED);
+            }
+        });
+    });
 }
 
 // =========================================================================================================================
@@ -114,6 +159,15 @@ function symlinkCustomScripts(filebotScriptsPath, processingTempPath) {
 
     return amcScriptPath;
 }
+
+function existCustomScriptsSymlinks(processingTempPath) {
+    var amcScriptPath = processingTempPath + "/amc.groovy";
+    var cleanerScriptPath = processingTempPath + "/cleaner.groovy";
+    var libScriptsPath = processingTempPath + "/lib";
+
+    return fs.accessSync(amcScriptPath) && fs.accessSync(cleanerScriptPath) && fs.accessSync(libScriptsPath);
+}
+
 
 
 module.exports = filebotExecutor;

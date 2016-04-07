@@ -4,7 +4,6 @@ var utilService = require('./utilService');
 var Torrent = require('../models').torrent;
 var TorrentState = require('./torrentState');
 var Promise = require('bluebird');
-var utilService = require('./utilService');
 var moment = require('moment');
 var _ = require('lodash');
 var torrentUtilsService = require('./torrentUtilsService');
@@ -15,7 +14,7 @@ var transactionUtilsService = require('./transactionUtilsService');
 //     throw error;
 // });
 
-var torrentService = {}
+var torrentService = {};
 
 torrentService.getCurrentStatus = function() {
   var upperDate = moment().utc().toDate();
@@ -26,7 +25,7 @@ torrentService.getCurrentStatus = function() {
   // select t from torrent
   // where (dateStarted is not null and dateStarted between :lower and :upper)
   // or state != 'COMPLETED'
-  var query = Torrent.findAll({
+  return Torrent.findAll({
     where: {
       $or: {
         dateStarted: {
@@ -44,13 +43,11 @@ torrentService.getCurrentStatus = function() {
       ['dateStarted', 'DESC']
     ]
   });
-
-  return query;
-}
+};
 
 torrentService.updateTorrentsStatus = function() {
   utilService.startNewInterval('torrentsStatus', torrentService.updateDataForTorrents, 4000);
-}
+};
 
 torrentService.updateDataForTorrents = function() {
   log.debug("Updating torrents..");
@@ -261,7 +258,6 @@ torrentService.populateTorrentWithResponseData = function(startTorrentResponse, 
 }
 
 torrentService.saveTorrentWithState = function(torrent, torrentState) {
-  torrent.state = torrentState;
   return torrentService.findByHash(torrent.hash).then(function(torrentFound) {
     if (torrentFound == null) {
       return torrentService.persistTorrent(torrent);
@@ -272,14 +268,25 @@ torrentService.saveTorrentWithState = function(torrent, torrentState) {
   });
 }
 
-torrentService.completeTorrentRename = function (completedRename) {
-    return torrentService.findByHash(completedRename.torrentHash).then((torrent) => {
-        torrent.renamedPath = completedRename.renamedPath;
+torrentService.saveTorrentWithStateUsingHash = function(torrentHash, torrentState) {
+    return torrentService.findByHash(torrentHash).then(function(torrentFound) {
+        if (torrentFound !== null) {
+            torrentFound.state = torrentState;
+            return torrentFound.save();
+        } else {
+            log.warn("[WARNING] The torrent with hash ${torrentHash} does not exist");
+        }
+    });
+};
+
+torrentService.completeTorrentRename = function (torrentHash, renamedPathsAsString) {
+    return torrentService.findByHash(torrentHash).then((torrent) => {
+        torrent.renamedPath = renamedPathsAsString;
         torrent.state = TorrentState.RENAMING_COMPLETED;
         //TODO: Mark the job as completed
         return torrent.save();
     });
-}
+};
 
 // -------------------------------- PRIVATE -----------------------------------
 

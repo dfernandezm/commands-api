@@ -88,8 +88,8 @@ filebotService.prepareRename = function(torrentList) {
 
            var renameTasks = [];
            var updatingPromises = [];
+
            _.forEach(torrentList, function(torrent) {
-               log.debug("Torrent ",  torrent);
 
                if (torrent.state !== TorrentState.DOWNLOAD_COMPLETED) {
                    log.warn('Torrent ', torrent.hash, ' is not in DOWNLOAD_COMPLETED, skipping...');
@@ -128,7 +128,7 @@ filebotService.prepareRename = function(torrentList) {
            });
 
            if (renameTasks.length > 0) {
-             return Promise.all(updatingPromises).then(function(updatedTorrents) {
+             return Promise.all(updatingPromises).then( () => {
                  return filebotService.startRenamerJob(renameTasks, jobGuid);
              });
            } else {
