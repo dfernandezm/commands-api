@@ -386,15 +386,15 @@ function createOrUpdateTorrentData(existingTorrent, torrentHash, torrentName, fi
 }
 
 function processSingleTorrentResponse(torrentResponse) {
-	var torrentHash = torrentResponse.hashString;
-  var findTorrent = torrentService.findByHash(torrentHash);
-  return findTorrent.then(createOrUpdateTorrentClosure(torrentResponse, torrentHash));
+    var torrentHash = torrentResponse.hashString;
+    return torrentService.findByHash(torrentHash)
+                         .then(createOrUpdateTorrentClosure(torrentResponse, torrentHash));
 }
 
 function createOrUpdateTorrentClosure(torrentResponse, torrentHash) {
   return function (existingTorrent) {
     if (existingTorrent === null) {
-      log.debug("Torrent does not exist in DB with hash: " + torrentHash + " -- transmission response should create it!");
+      log.debug("Torrent does not exist in DB with hash: " + torrentHash + " -- transmission response should create it");
     } else {
       log.debug("Torrent exists: " + torrentHash + " -- updating");
       return updateExistingTorrentFromResponse(existingTorrent, torrentResponse);
@@ -405,11 +405,10 @@ function createOrUpdateTorrentClosure(torrentResponse, torrentHash) {
 function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
 
     var torrentState = existingTorrent.state;
-    log.debug(">>>>>>> percent in response is: ", torrentResponse.percentDone);
+    log.debug(">>> Percent in response is: ", torrentResponse.percentDone);
     var percent = 100 * torrentResponse.percentDone;
-    log.debug(">>>>>>> Percent: ", percent);
     var percentDone = Math.round(100 * percent) / 100;
-    log.debug(">>>>>>> PercentDone: ", percentDone);
+    log.debug(">>> Percent: ", percentDone);
     existingTorrent.magnetLink = torrentResponse.magnetLink;
     var torrentName = existingTorrent.torrentName;
     var currentPercent = existingTorrent.percentDone;
@@ -423,7 +422,9 @@ function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
     log.debug("[UPDATE-TORRENTS] Torrent DB: ", torrentName, ' is ', torrentState,
         ' stored percentage is ', currentPercent);
 
-    if (percentDone !== null && percentDone > 0 && percentDone < 100 &&
+    if (percentDone !== null && 
+        percentDone > 0 && 
+        percentDone < 100 &&
         currentPercent !== 100 &&
         torrentState !== TorrentState.DOWNLOAD_COMPLETED &&
         torrentState !== TorrentState.RENAMING &&

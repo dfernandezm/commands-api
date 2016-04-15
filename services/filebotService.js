@@ -18,14 +18,14 @@ var filebotService = {};
 
 filebotService.renameTorrent = function (torrentHash) {
     return torrentService.findByHash(torrentHash).then(function (torrent) {
-        log.debug("About to call service to rename...", torrent.torrentName);
         return filebotService.rename([torrent]);
     });
 };
 
 filebotService.renameChecking = () => {
     log.debug("[RENAMER] Running renameChecking... ");
-    return torrentService.findTorrentsWithState(TorrentState.RENAMING).then(startRenamerIfNotRunning);
+    return torrentService.findTorrentsWithState(TorrentState.RENAMING)
+                         .then(startRenamerIfNotRunning);
 };
 
 var startRenamerIfNotRunning = (renamingTorrents) => {
