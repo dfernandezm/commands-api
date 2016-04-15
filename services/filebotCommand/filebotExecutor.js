@@ -73,7 +73,7 @@ filebotExecutor.startMonitoringFilebotProcess = function (filebotProcess, torren
                 var originalPath = match[1];
                 var renamedPath = match[2];
 
-                log.debug("[FILEBOT-COMMAND-RENAME-DETECTED] ${originalPath}  -->  ${renamedPath}");
+                log.debug(`[FILEBOT-COMMAND-RENAME-DETECTED] ${originalPath}  -->  ${renamedPath}`);
 
                 completedRenames[torrentHash].push({
                     type: 'RENAME',
@@ -97,7 +97,7 @@ filebotExecutor.startMonitoringFilebotProcess = function (filebotProcess, torren
 
             if (exitCode == 0) {
                 log.info(`[FILEBOT-FINISHED] Successful renamed torrent hash ${torrentHash}`);
-                log.info("[FILEBOT-FINISHED] Completed renames: ", JSON.stringify(completedRenames));
+                log.info("[FILEBOT-FINISHED] Completed renames: " + JSON.stringify(completedRenames));
 
                 var completedRenamesForTorrent = completedRenames[torrentHash];
                 var renamedPaths = [];
@@ -117,7 +117,7 @@ filebotExecutor.startMonitoringFilebotProcess = function (filebotProcess, torren
                 });
 
                 if (!renamedError) {
-                    log.info("Complete renaming for torrent ${torrentHash} -- RENAMING_COMPLETED");
+                    log.info(`Complete renaming for torrent ${torrentHash} -- RENAMING_COMPLETED`);
                     return torrentService.completeTorrentRename(torrentHash, renamedPaths.join(';'));
                 } else {
                     log.warn("Setting torrent ${torrentHash} back to DOWNLOAD_COMPLETED");

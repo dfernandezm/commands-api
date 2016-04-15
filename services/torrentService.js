@@ -126,31 +126,31 @@ torrentService.findTorrentByMagnetLink= function(magnetLink) {
   return Torrent.findOne({ where: {magnetLink: magnetLink} });
 }
 
-torrentService.startTorrentDownload = function(torrent) {
-	var existingTorrentPromise = {};
-  var torrentFileLink = torrent.torrentFileLink
-  var magnetLink = torrent.magnetLink;
-  var link = null;
+torrentService.startTorrentDownload = function (torrent) {
+    var existingTorrentPromise = {};
+    var torrentFileLink = torrent.torrentFileLink;
+    var magnetLink = torrent.magnetLink;
+    var link = null;
 
-  if (torrentFileLink) {
-    existingTorrentPromise = torrentService.findTorrentByFileLink(torrent.torrentFileLink)
-    log.debug("[TORRENT-START] Starting download from torrent file: ", torrentFileLink);
-    link = torrentFileLink;
-  } else if (magnetLink) {
-    existingTorrentPromise = torrentService.findTorrentByMagnetLink(torrent.magnetLink);
-    log.debug("[TORRENT-START] Starting download from torrent magnet: ", magnetLink);
-    link = magnetLink;
-  }
+    if (torrentFileLink) {
+        existingTorrentPromise = torrentService.findTorrentByFileLink(torrent.torrentFileLink)
+        log.debug("[TORRENT-START] Starting download from torrent file: ", torrentFileLink);
+        link = torrentFileLink;
+    } else if (magnetLink) {
+        existingTorrentPromise = torrentService.findTorrentByMagnetLink(torrent.magnetLink);
+        log.debug("[TORRENT-START] Starting download from torrent magnet: ", magnetLink);
+        link = magnetLink;
+    }
 
-  torrent.title = torrent.torrentName =
-    torrent.title || torrent.torrentName || torrentUtilsService.getNameFromMagnetLinkOrTorrentFile(link);
+    torrent.title = torrent.torrentName =
+        torrent.title || torrent.torrentName || torrentUtilsService.getNameFromMagnetLinkOrTorrentFile(link);
 
-  log.debug("[TORRENT-START] Torrent title: ", torrent.title);
+    log.debug("[TORRENT-START] Torrent title: ", torrent.title);
 
-  torrent.guid = utilService.generateGuid();
-  log.debug("[TORRENT-START] Guid generated is: ", torrent.guid)
-  return existingTorrentPromise
-         .then(torrentService.startNewTorrentOrFail(torrent));
+    torrent.guid = utilService.generateGuid();
+    log.debug("[TORRENT-START] Guid generated is: ", torrent.guid);
+    return existingTorrentPromise
+        .then(torrentService.startNewTorrentOrFail(torrent));
 }
 
 torrentService.startNewTorrentOrFail = function(newTorrent) {
@@ -288,7 +288,15 @@ torrentService.completeTorrentRename = function (torrentHash, renamedPathsAsStri
     });
 };
 
-// -------------------------------- PRIVATE -----------------------------------
+torrentService.findTorrentsWithState = (state) => {
+    return Torrent.findAll({
+        where: {
+            state: state
+        }
+    });
+};
+
+// --------------------------------------- PRIVATE -----------------------------------
 
 /**
 */
@@ -375,9 +383,6 @@ function createOrUpdateTorrentClosure(torrentResponse, torrentHash) {
   return function (existingTorrent) {
     if (existingTorrent === null) {
       log.debug("Torrent does not exist in DB with hash: " + torrentHash + " -- transmission response should create it!");
-      // The torrent could have been created with GUID only and still not getting update from transmission with a hash
-      // return createAndRelocateTorrent(torrentResponse);
-      return;
     } else {
       log.debug("Torrent exists: " + torrentHash + " -- updating");
       return updateExistingTorrentFromResponse(existingTorrent, torrentResponse);
@@ -386,58 +391,65 @@ function createOrUpdateTorrentClosure(torrentResponse, torrentHash) {
 }
 
 function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
-  var torrentState = existingTorrent.state;
-  log.debug(">>>>>>> percent in response is: ", torrentResponse.percentDone);
-  var percent = 100 * torrentResponse.percentDone;
-  log.debug(">>>>>>> Percent: ", percent);
-  var percentDone = Math.round(100 * percent) / 100;
-  log.debug(">>>>>>> PercentDone: ", percentDone);
-  existingTorrent.magnetLink = torrentResponse.magnetLink;
-  var torrentName = existingTorrent.torrentName;
-  var currentPercent = existingTorrent.percentDone;
 
-  // bytes to Mb
-  var torrentSize = torrentResponse.totalSize || 0;
-  var torrentSizeMb = Math.round( (torrentSize / 1024) / 1024);
-  existingTorrent.size = existingTorrent.size || torrentSizeMb;
+    var torrentState = existingTorrent.state;
+    log.debug(">>>>>>> percent in response is: ", torrentResponse.percentDone);
+    var percent = 100 * torrentResponse.percentDone;
+    log.debug(">>>>>>> Percent: ", percent);
+    var percentDone = Math.round(100 * percent) / 100;
+    log.debug(">>>>>>> PercentDone: ", percentDone);
+    existingTorrent.magnetLink = torrentResponse.magnetLink;
+    var torrentName = existingTorrent.torrentName;
+    var currentPercent = existingTorrent.percentDone;
 
-  log.debug("[UPDATE-TORRENTS] Torrent response for§: ", torrentResponse.name, percentDone, '%');
-  log.debug("[UPDATE-TORRENTS] Torrent DB: ", torrentName, ' is ', torrentState,
-            ' stored percentage is ', currentPercent);
+    // bytes to Mb
+    var torrentSize = torrentResponse.totalSize || 0;
+    var torrentSizeMb = Math.round((torrentSize / 1024) / 1024);
+    existingTorrent.size = existingTorrent.size || torrentSizeMb;
 
-  if (percentDone !== null && percentDone > 0 && percentDone < 100 &&
-      currentPercent !== 100 &&
-      torrentState !== TorrentState.DOWNLOAD_COMPLETED &&
-      torrentState !== TorrentState.RENAMING &&
-      torrentState !== TorrentState.RENAMING_COMPLETED &&
-      torrentState !== TorrentState.FETCHING_SUBTITLES &&
-      torrentState !== TorrentState.FAILED &&
-      torrentState !== TorrentState.COMPLETED) {
+    log.debug("[UPDATE-TORRENTS] Torrent response for§: ", torrentResponse.name, percentDone, '%');
+    log.debug("[UPDATE-TORRENTS] Torrent DB: ", torrentName, ' is ', torrentState,
+        ' stored percentage is ', currentPercent);
 
-      existingTorrent.percentDone = percentDone;
+    if (percentDone !== null && percentDone > 0 && percentDone < 100 &&
+        currentPercent !== 100 &&
+        torrentState !== TorrentState.DOWNLOAD_COMPLETED &&
+        torrentState !== TorrentState.RENAMING &&
+        torrentState !== TorrentState.RENAMING_COMPLETED &&
+        torrentState !== TorrentState.FETCHING_SUBTITLES &&
+        torrentState !== TorrentState.FAILED &&
+        torrentState !== TorrentState.COMPLETED) {
 
-      if (torrentState !== TorrentState.DOWNLOADING && torrentState !== TorrentState.PAUSED) {
-        existingTorrent.state = TorrentState.DOWNLOADING;
-        log.debug("Torrent ", torrentName, " found in DB, setting as DOWNLOADING");
-      }
+        existingTorrent.percentDone = percentDone;
 
-  } else if (percentDone >= 100 &&
-             (torrentState == TorrentState.DOWNLOADING || torrentState == null
-              || torrentState == '')) {
+        if (torrentState !== TorrentState.DOWNLOADING && torrentState !== TorrentState.PAUSED) {
+            existingTorrent.state = TorrentState.DOWNLOADING;
+            log.debug("Torrent ", torrentName, " found in DB, setting as DOWNLOADING");
+        }
 
-    existingTorrent.percentDone = 100;
-    existingTorrent.state = TorrentState.DOWNLOAD_COMPLETED;
-    existingTorrent.dateFinished = moment.utc().toDate(); //only dates in sequelize
-    log.info("[UPDATE-TORRENTS] Torrent ", torrentName, " finished downloading -- DOWNLOAD_COMPLETED");
-  }
+    } else if (percentDone >= 100 &&
+        (torrentState == TorrentState.DOWNLOADING || torrentState == null
+        || torrentState == '')) {
 
-  return existingTorrent.save().then(function(savedTorrent) {
-    // Clear finished torrents from Transmission directly
-    if (torrentState === TorrentState.COMPLETED) {
-      log.info("Torrent ", savedTorrent.hash, " COMPLETED -- removing from Transmission");
-      return transmissionService.cancelTorrent(savedTorrent.hash);
+        existingTorrent.percentDone = 100;
+        existingTorrent.state = TorrentState.DOWNLOAD_COMPLETED;
+        existingTorrent.dateFinished = moment.utc().toDate(); //only date objects are valid in sequelize
+        log.info("[UPDATE-TORRENTS] Torrent ", torrentName, " finished downloading -- DOWNLOAD_COMPLETED");
     }
-  });
+
+    return existingTorrent.save().then(function (savedTorrent) {
+        // Clear finished torrents from Transmission directly
+        if (torrentState === TorrentState.COMPLETED) {
+            log.info("Torrent ", savedTorrent.hash, " COMPLETED -- removing from Transmission");
+            return transmissionService.cancelTorrent(savedTorrent.hash);
+        }
+
+        if (torrentState === TorrentState.DOWNLOAD_COMPLETED) {
+            log.info("Starting renamer after completed download");
+            var filebotService = require('./filebotService');
+            filebotService.startRenameCheckingInterval();
+        }
+    });
 }
 
 //TODO: execute in a transaction

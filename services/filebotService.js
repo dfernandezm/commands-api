@@ -21,7 +21,33 @@ filebotService.renameTorrent = function(torrentHash) {
     log.debug("About to call service to rename...", torrent.torrentName);
     return filebotService.rename([torrent]);
   });
-}
+};
+
+filebotService.renameChecking = () => {
+
+    log.info("[RENAMER] Checking if there are torrents to rename");
+
+    // Find torrents in DOWNLOAD_COMPLETED state
+    return torrentService.findTorrentsWithState(TorrentState.DOWNLOAD_COMPLETED).then((torrents) => {
+        if (torrents !== null && torrents.length > 0) {
+
+            return filebotService.rename(torrents);
+
+        } else {
+            log.info("There is no torrents to rename");
+            return null;
+        }
+        //TODO: setTimeout instead of setInterval
+    });
+};
+
+filebotService.startRenameCheckingInterval = () => {
+    utilService.startNewInterval('renameChecking',filebotService.renameChecking,50000);
+};
+
+filebotService.stopRenameCheckingInterval = () => {
+    utilService.stopInterval('renameChecking');
+};
 
 filebotService.existsFilebot = function () {
     return shellService.checkExecutable('filebot').status == CommandStatus.OK;
@@ -29,12 +55,11 @@ filebotService.existsFilebot = function () {
 
 filebotService.getFilebotInfo = function () {
   if (this.existsFilebot()) {
-    //shellService.executeWithCallback('filebot -script fn:sysinfo');
     return { filebotCommand: FilebotCommandType.INFO, status: CommandStatus.RUNNING };
   } else {
     return { filebotCommand: FilebotCommandType.INFO, status: CommandStatus.EXECUTABLE_NOT_FOUND};
   }
-}
+};
 
 // to be removed
 filebotService.testCommand = function() {
@@ -75,12 +100,9 @@ filebotService.prepareRename = function(torrentList) {
   var tSettings = settingsService.getDefaultTransmissionSettings();
   var p = [mSettings, tSettings];
   return Promise.all(p).then(function (result) {
-           log.debug("Got settings from DB");
-           var mediacenterSettings = result[0];
-           var transmissionSettings = result[1];
 
+           var mediacenterSettings = result[0];
            var baseLibraryPath = mediacenterSettings.baseLibraryPath;
-           log.debug("Base library path ", baseLibraryPath);
            var xbmcHostOrIp = mediacenterSettings.xbmcHostOrIp;
            var processingPath = mediacenterSettings.processingTempPath;
            var amcScriptPath = processingPath + "/" + AMC_SCRIPT_NAME;
@@ -109,7 +131,8 @@ filebotService.prepareRename = function(torrentList) {
                    xbmcHost: xbmcHostOrIp,
                    customScript: amcScriptPath,
                    logFile: logFile
-                 }
+                 };
+
                  var cmd = filebotService.createRenameCommand(filebotRenameSpec);
                  var renameTask = {
                    command: cmd,
@@ -158,15 +181,15 @@ filebotService.startRenamerJob = function(renameTasks, jobGuid) {
 }
 
 filebotService.rename = function(torrentList) {
-  log.debug("About to rename...");
+
   return filebotService.prepareRename(torrentList).then(function(job) {
-     log.debug("Renamer started! ", job);
+     log.debug("Renamer started: ", job);
      return job;
   }).catch(function (error) {
     log.error("Error occurred starting renamer: ", error);
     throw error;
   });
-}
+};
 
 // ===========================================================
 
