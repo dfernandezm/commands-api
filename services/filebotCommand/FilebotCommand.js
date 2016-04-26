@@ -1,5 +1,5 @@
-//FILEBOT_AMC_CMD="$FB_EXEC -script $AMC_SCRIPT_PATH --output \"$OUTPUT\" --log-file $LOG_LOCATION --action $ACTION -non-strict \"$INPUT_PATH\" --def clean=y --conflict auto --def skipExtract=y --lang $CONTENT_LANG"
-//FILEBOT_AMC_CMD="$FILEBOT_AMC_CMD --def unsorted=y --def \"seriesFormat=TV Shows/{n.upperInitial()}/{episode.special ? 'Specials':'Season '+s}/{n.upperInitial()} {episode.special ? '0xSpecial '+special.pad(2) : sxe.pad(2)} $TITLE_ESCAPED\" \"movieFormat=Movies/{n} ({y})/{n}\""
+"use strict";
+
 var _ = require('lodash');
 var util = require('util');
 var defaultOptions = require('./filebotOptions');
@@ -16,6 +16,7 @@ function FilebotCommand(commandType, inputPath, options) {
   // always initialize all instance properties
   this.commandType = commandType || CommandType.RENAME;
   this.inputPath = inputPath;
+  this.command = "";
 
   this.options = {};
   _.extend(this.options, defaultOptions);
@@ -117,11 +118,11 @@ proto.argumentsArray = function() {
   var actionPart = this._generateArgumentPair(filebotArgs.ACTION);
   var inputPart = [this.options.strict, this.inputPath];
   var langPart = this._generateArgumentPair(filebotArgs.LANG);
-  var arguments = [];
+  var args = [];
   //TODO: different presets
   if (this.commandType == CommandType.RENAME) {
-    customScriptPart = this._generateArgumentPair(filebotArgs.SCRIPT);
-    defParts = _.concat(this._generateArgumentPair(filebotArgs.DEF_CLEAN),
+    let customScriptPart = this._generateArgumentPair(filebotArgs.SCRIPT);
+    let defParts = _.concat(this._generateArgumentPair(filebotArgs.DEF_CLEAN),
                this._generateArgumentPair(filebotArgs.DEF_SKIP_EXTRACT),
                this._generateArgumentPair(filebotArgs.DEF_UNSORTED),
                this._generateArgumentPair(filebotArgs.DEF_XMBC));
@@ -129,15 +130,14 @@ proto.argumentsArray = function() {
     var tvShowsFormat = this.options.tvShowsFormat.replace('$TV_SHOWS_FOLDER', this.options.tvShowsFolderName);
     var moviesFormat = this.options.moviesFormat.replace('$MOVIES_FOLDER', this.options.moviesFolderName);
 
-    tvShowsAndMoviesPart = [filebotArgs.DEF, tvShowsFormat, moviesFormat];
+    let tvShowsAndMoviesPart = [filebotArgs.DEF, tvShowsFormat, moviesFormat];
 
-    arguments = _.concat(customScriptPart, outputPart,
+    args = _.concat(customScriptPart, outputPart,
               logfilePart, actionPart, inputPart,
               langPart, defParts, tvShowsAndMoviesPart);
   }
 
-  console.log("Generated arguments array: " + arguments);
-  return arguments;
+  return args;
 }
 
 proto.executable = function() {
@@ -179,6 +179,7 @@ proto.generate = function() {
   }
 
   console.log("Generated command: " + command);
+  this.command = command;
   return command;
 };
 
@@ -202,8 +203,8 @@ proto._generateArgumentPair = function(argumentName) {
   var argument = _.find(this.commandArguments, {argumentName : argumentName});
   if(typeof argument !== "undefined") {
     //console.log(", cmdArg: " + argument.argumentName + ", val: " + argument.argumentValue);
-    if (_.startsWith(argumentName,filebotArgs.DEF)) {
-        var argumentName = argumentName.replace(filebotArgs.DEF, "");
+    if (_.startsWith(argumentName, filebotArgs.DEF)) {
+        argumentName = argumentName.replace(filebotArgs.DEF, "");
         return [filebotArgs.DEF, argumentName + argument.argumentValue];
     } else {
       return [argument.argumentName, argument.argumentValue];
@@ -211,13 +212,17 @@ proto._generateArgumentPair = function(argumentName) {
   } else {
     return [];
   }
-}
+};
 
 proto.printOptions = function () {
   _.each(this.options, function(value, key) {
     console.log(key + ": " + value);
   });
-}
+};
+
+proto.commandOut = () => {
+    return this.command;
+};
 
 FilebotCommand.prototype = proto;
 

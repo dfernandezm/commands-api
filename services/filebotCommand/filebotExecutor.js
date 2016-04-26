@@ -1,3 +1,5 @@
+"use strict";
+
 var shellService = require('../shellService');
 var fs = require('fs');
 var log = require('../fb-logger');
@@ -43,11 +45,11 @@ filebotExecutor.executeRenameTasks = function (renameTasks) {
 
 filebotExecutor.executeFilebotCommand = function (filebotCommand) {
     try {
-        var executable = filebotCommand.executable();
-        var arguments = filebotCommand.argumentsArray();
-        arguments = _.pull(arguments, "");
-        log.debug("[FILEBOT-EXECUTOR] Executing ", executable, " with arguments: ", arguments);
-        return spawn(executable, arguments);
+        let executable = filebotCommand.executable();
+        let args = filebotCommand.argumentsArray();
+        log.debug("[FILEBOT-EXECUTOR] Executable is: [" + executable + "]");
+        log.debug("[FILEBOT-EXECUTOR] Arguments are: [" + args.join(" ") + "]");
+        return spawn(executable, args);
     } catch (err) {
         log.error("Error occurred spawning Filebot process ", err);
         return null;
@@ -65,14 +67,13 @@ filebotExecutor.startMonitoringFilebotProcess = function (filebotProcess, torren
         filebotProcess.stdout.on('data', function (data) {
 
             var dataStr = data.toString('utf8');
-
-            log.debug("[FB] " + dataStr);
+            log.debug("[FILEBOT-COMMAND-RENAMING] " + dataStr);
 
             var match = pathMovedPattern.exec(dataStr);
             if (match !== null && match.length > 1) {
                 var originalPath = match[1];
                 var renamedPath = match[2];
-
+                
                 log.debug(`[FILEBOT-COMMAND-RENAME-DETECTED] ${originalPath}  ===>  ${renamedPath}`);
 
                 completedRenames[torrentHash].push({
@@ -81,10 +82,7 @@ filebotExecutor.startMonitoringFilebotProcess = function (filebotProcess, torren
                     original: originalPath,
                     renamedPath: renamedPath
                 });
-
-            } else {
-                log.debug("[FILEBOT-COMMAND-RENAMING] " + dataStr);
-            }
+            } 
         });
 
         filebotProcess.stderr.on('data', function (data) {
@@ -133,7 +131,9 @@ filebotExecutor.startMonitoringFilebotProcess = function (filebotProcess, torren
             }
         });
     });
-}
+};
+
+
 
 // =========================================================================================================================
 
@@ -149,7 +149,7 @@ function symlinkCustomScripts(filebotScriptsPath, processingTempPath) {
       fs.unlinkSync(cleanerScriptPath);
       fs.unlinkSync(libScriptsPath);
     } catch(err) {
-      log.debug("[FILEBOT-EXECUTOR] Error deleting symlinks -- this is because they did no exist previously: ", err);
+      log.debug("[FILEBOT-EXECUTOR] Error deleting symlinks -- this is because they did not exist previously: ", err);
     }
     
     // Create symlinks
@@ -164,10 +164,18 @@ function existCustomScriptsSymlinks(processingTempPath) {
     var amcScriptPath = processingTempPath + "/amc.groovy";
     var cleanerScriptPath = processingTempPath + "/cleaner.groovy";
     var libScriptsPath = processingTempPath + "/lib";
+    let symlinksExist;
 
-    return fs.accessSync(amcScriptPath) && fs.accessSync(cleanerScriptPath) && fs.accessSync(libScriptsPath);
+    try {
+        fs.accessSync(amcScriptPath) && fs.accessSync(cleanerScriptPath) && fs.accessSync(libScriptsPath);
+        symlinksExist = true;
+    } catch (err) {
+        // Assume this error is ENOENT, so they don't exist
+        log.warn("[FILEBOT-EXECUTOR] Error accessing symlinks -- this is likely to be due to they are absent, which is ok ", err)
+        symlinksExist = false;
+    }
+
+    return symlinksExist;
 }
-
-
 
 module.exports = filebotExecutor;

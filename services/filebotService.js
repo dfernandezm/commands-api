@@ -106,6 +106,7 @@ filebotService.prepareRename = function (torrentList) {
                 var logFile = processingPath + '/rename_' + jobGuid +
                     "_" + torrent.hash + ".log";
                 log.debug("The log file is: ", logFile);
+
                 var filePath = torrent.filePath;
                 var contentLanguage = findLanguageFromTorrent(torrent);
 
@@ -135,6 +136,8 @@ filebotService.prepareRename = function (torrentList) {
                 renameTasks.push(renameTask);
             }
         });
+
+        //TODO: Add extra task for elements inside Unsorted folder
 
         if (renameTasks.length > 0) {
             return Promise.all(updatingPromises).then(() => {

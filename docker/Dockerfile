@@ -1,7 +1,7 @@
 FROM nodesource/jessie:4.3.1
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 RUN apt-get update
-RUN apt-get -y install sudo git wget ntfs-3g curl ssh less unzip vim telnet net-tools
+RUN apt-get -y install sudo git wget ntfs-3g curl ssh less unzip vim telnet net-tools locales
 RUN useradd -m osmc && echo "osmc:osmc" | chpasswd && adduser osmc sudo
 ENV INSTALL_DIR /opt/software/install
 RUN echo "Building TVster image..."
@@ -48,6 +48,6 @@ RUN chmod +x $INSTALL_DIR/start-services.sh
 
 RUN npm install -g nodemon
 
-EXPOSE 3000 80 9091 22 3306
+EXPOSE 3000 80 9091 22 3306 5858
 #USER osmc
 CMD $INSTALL_DIR/start-services.sh
