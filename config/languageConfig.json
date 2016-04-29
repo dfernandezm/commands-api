@@ -1,4 +1,8 @@
 {
   "spanishIndicators": ["divxtotal", "spanish", "español", "espanol",
-                        "elitetorrent", "mejortorrent", ".spa.", ".cas."]
+                        "elitetorrent", "mejortorrent", ".spa.", ".cas."],
+  "subtitlesExt": {
+    "es": "spa",
+    "en": "eng"
+  }
 }

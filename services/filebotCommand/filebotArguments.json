@@ -7,8 +7,10 @@
   "DEF_UNSORTED": "--def unsorted=",
   "DEF_SKIP_EXTRACT": "--def skipExtract=",
   "DEF_XBMC": "--def xbmc=",
-  "DEF": "--def",
   "CONFLICT": "--conflict",
   "OUTPUT": "--output",
-  "LANG": "--lang"
+  "LANG": "--lang",
+  "SUBTITLES": "-get-missing-subtitles",
+  "ENCODING": "--encoding",
+  "NON_STRICT": "-non-strict"
 }
