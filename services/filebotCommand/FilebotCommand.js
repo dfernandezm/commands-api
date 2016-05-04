@@ -147,7 +147,7 @@ proto.argumentsArray = function () {
 
 proto.executable = function () {
     return this.options.executable;
-}
+};
 
 // class methods
 proto.generate = function () {
