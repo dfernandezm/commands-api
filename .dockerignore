@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+*.md
+docker-osx-dev-master
+.git
+docker
+client/node_modules
+client/npm-debug.log
+models-test

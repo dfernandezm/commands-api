@@ -9,9 +9,10 @@ Sequelize.cls = namespace;
 
 var env = 'staging';
 var config    = require(__dirname + '/../config/config.json')[env];
+config.url = "mysql://root: " + process.env.MYSQL_PASSWORD + "@" + process.env.MYSQL_URL + ":" + process.env.MYSQL_PORT + "/tvster";
 var sequelize = new Sequelize(config.url);
-//var sequelize = new Sequelize('mysql://root:root@localhost:3306/tvster');
-var db = {}
+
+var db = {};
 
 fs
   .readdirSync(__dirname)

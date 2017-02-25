@@ -8,22 +8,6 @@ app.engine('ejs', engine);
 app.set('view engine', 'ejs');
 app.set('views', __dirname + '/views');
 
-// https://github.com/JacksonTian/ejs-mate
-
-
-
-// var hoffman = require('hoffman');
-// app.set('views', path.join(__dirname, 'views')); // path to your templates
-// app.set('view engine', 'dust');
-// app.engine('dust', hoffman.__express());
-//
-// // works with caching
-// app.set('view cache', true);
-
-// optionally load all templates into dust cache on server start
-// hoffman.prime(app.settings.views);
-
-
 // configure app to use bodyParser()
 // this will let us get the data from a POST
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -37,7 +21,9 @@ app.use(function(err, req, res, next) {
     res.status(err.status || 500);
 });
 
-// var server = app.listen(3000, function () {
+// let port = process.env.PORT || 3000;
+//
+// var server = app.listen(port, function () {
 //   var host = server.address().address;
 //   var port = server.address().port;
 //

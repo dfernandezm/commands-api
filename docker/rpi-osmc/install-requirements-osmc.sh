@@ -29,26 +29,6 @@ fi
 update-alternatives --install /usr/bin/$JAVA_EXEC $JAVA_EXEC /opt/software/jdk1.8.0_33/bin/java 1
 update-alternatives --config $JAVA_EXEC
 
-# Install PHP 5.5+
-apt-get -y install php5 php-pear libyaml-dev make php5-dev php5-curl
-pecl install yaml
-# add extension=yaml.so to php.ini
-
-# Install Apache
-apt-get -y install apache2 apache2-mpm-prefork apache2.2-bin apache2.2-common libapache2-mod-php5 cron
-
-# Enable mod rewrite
-ln -s /etc/apache2/mods-available/rewrite.load /etc/apache2/mods-enabled/rewrite.load
-
-# Install MySQL
-# If not prompted for that, do this:
-
-# /etc/init.d/mysql stop
-# /usr/bin/mysqld_safe --skip-grant-tables
-# mysql --user=root mysql
-# UPDATE user SET Password=PASSWORD('YOUR_PASSWORD') WHERE Host='localhost' AND User='root';
-apt-get -y install mysql-server php5-mysql
-
 # Install and configure transmission
 ./install-transmission.sh
 mkdir -p /var/lib/transmission-daemon/info
