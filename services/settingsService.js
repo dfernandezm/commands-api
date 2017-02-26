@@ -1,7 +1,6 @@
 var _ = require('lodash');
-var sequelize = require('../models').sequelize;
 var log = require('./logger');
-
+var sequelize = require('../models').sequelize;
 var TransmissionSettings = require('../models').transmissionSettings;
 var MediacenterSettings = require('../models').mediacenterSettings;
 

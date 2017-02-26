@@ -9,8 +9,18 @@ const models = require("../models");
 
 app.set('port', process.env.PORT || 3000);
 
-models.sequelize.sync().then(function () {
-  var server = app.listen(app.get('port'), function() {
-    debug('Server listening on port ',server.address().port);
-  });
-});
+const startServer = () => {
+    var server = app.listen(app.get('port'), function () {
+        debug('Server listening on port ', server.address().port);
+    });
+}
+
+if (!process.env.TVSTER_MODE || process.env.TVSTER_MODE !== 'organizer') {
+    models.sequelize.sync().then(function () {
+       startServer();
+    });
+} else {
+  startServer();
+}
+
+

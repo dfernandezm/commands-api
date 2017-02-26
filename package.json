@@ -1,11 +1,12 @@
 {
-  "name": "commands-api",
-  "version": "1.0.0",
-  "description": "TVster REST API",
+  "name": "tvster",
+  "version": "1.0.0-RC1",
+  "description": "TVster REST API / Organizer",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "DEBUG=* MYSQL_PASSWORD=$MYSQL_ENV_MYSQL_ROOT_PASSWORD MYSQL_URL=$MYSQL_PORT_3306_TCP_ADDR MYSQL_PORT=$MYSQL_PORT_3306_TCP_PORT node bin/www"
+    "start": "DEBUG=* MYSQL_PASSWORD=$MYSQL_ENV_MYSQL_ROOT_PASSWORD MYSQL_URL=$MYSQL_PORT_3306_TCP_ADDR MYSQL_PORT=$MYSQL_PORT_3306_TCP_PORT node bin/www",
+    "start-organizer": "DEBUG=* node bin/www"
   },
   "author": "David Fernandez",
   "license": "MIT",

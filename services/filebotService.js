@@ -12,7 +12,7 @@ var TorrentState = require('./torrentState');
 var torrentService = require('./torrentService');
 var filebotExecutor = require('./filebotCommand/filebotExecutor');
 
-var AMC_SCRIPT_NAME = 'amc.groovy';
+var AMC_SCRIPT_NAME = 'fn:amc';
 
 var filebotService = {};
 
