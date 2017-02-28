@@ -147,3 +147,10 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 ```
 
 Only images built for ARM work on the Rpi. The images need to built in the Pi itselt. Check [this](http://stackoverflow.com/questions/33970083/docker-build-rpi-image-on-mac) on info about creating the image in Mac.
+
+## Typescript setup
+
+Install globally:
+```
+typings install dt~node --save --global 
+```

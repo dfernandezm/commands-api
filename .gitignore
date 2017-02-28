@@ -10,3 +10,4 @@ docker-osx-dev-master
 .idea/vcs.xml
 .idea/workspace.xml
 .idea/libraries/tvster_node_modules.xml
+build
