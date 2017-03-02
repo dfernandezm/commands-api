@@ -10,6 +10,7 @@ WORKDIR /usr/src/app
 # Install app dependencies
 COPY package.json /usr/src/app/
 RUN npm install
+RUN npm -g nodemon
 
 # Bundle app source
 ARG DB_URL
@@ -17,6 +18,6 @@ COPY . /usr/src/app
 
 ENV DATABASE_URL $DB_URL
 ENV PORT=4000
-EXPOSE 4000
+EXPOSE 4000 5858
 
 CMD [ "npm", "start" ]

@@ -12,7 +12,6 @@ router.use(function(req, res, next) {
  GET /
 */
 router.get('/', function (req, res) {
-  // res.json({ message: 'Welcome to commands api'});
   res.render('pages/index');
 });
 

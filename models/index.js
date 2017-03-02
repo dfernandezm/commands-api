@@ -13,7 +13,13 @@ if (!process.env.TVSTER_MODE || process.env.TVSTER_MODE !== 'organizer') {
 
     var env = 'staging';
     var config = require(__dirname + '/../config/config.json')[env];
-    config.url = "mysql://root: " + process.env.MYSQL_PASSWORD + "@" + process.env.MYSQL_URL + ":" + process.env.MYSQL_PORT + "/tvster";
+
+    let passwordPart="";
+    if (process.env.MYSQL_PASSWORD) {
+        passwordPart = ":" + process.env.MYSQL_PASSWORD;
+    }
+
+    config.url = "mysql://root" + passwordPart + "@" + process.env.MYSQL_URL + ":" + process.env.MYSQL_PORT + "/tvster";
     var sequelize = new Sequelize(config.url);
 
 
