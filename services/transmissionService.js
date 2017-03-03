@@ -144,7 +144,7 @@ function retry(maxRetries, promise) {
       throw err;
     }
     log.warn("Error in request to Transmission -- retrying: ", err);
-    return retry(maxRetries - 1, fn);
+    return retry(maxRetries - 1, promise);
   });
 }
 

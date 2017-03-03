@@ -10,11 +10,7 @@ var _ = require('lodash');
 var torrentUtilsService = require('./torrentUtilsService');
 var transactionUtilsService = require('./transactionUtilsService');
 var filebotService = require('./filebotService');
-
-//TODO: investigate this to propagate all errors
-// Promise.onPossiblyUnhandledRejection(function(error){
-//     throw error;
-// });
+const tvsterMessageService = require("./sqs/tvsterMessageService");
 
 var torrentService = {};
 
@@ -78,9 +74,7 @@ torrentService.stopTorrentsStatus = function() {
 }
 
 torrentService.persistTorrent = function(torrent) {
-  return Torrent.create(torrent).then(function(newTorrent) {
-    return newTorrent;
-  });
+  return Torrent.create(torrent);
 }
 
 torrentService.updateTorrent = function(torrent) {
@@ -135,7 +129,7 @@ torrentService.startTorrentDownload = function (torrent) {
     var link = null;
 
     if (torrentFileLink) {
-        existingTorrentPromise = torrentService.findTorrentByFileLink(torrent.torrentFileLink)
+        existingTorrentPromise = torrentService.findTorrentByFileLink(torrent.torrentFileLink);
         log.debug("[TORRENT-START] Starting download from torrent file: ", torrentFileLink);
         link = torrentFileLink;
     } else if (magnetLink) {
@@ -165,22 +159,14 @@ torrentService.startNewTorrentOrFail = (newTorrent) => {
             log.debug("[TORRENT-START] No existing torrent, starting and persisting now: ", newTorrent.torrentFileLink);
             return torrentService.startDownloadInTransmission(newTorrent);
         } else {
-
             log.debug("[TORRENT-START] Torrent exists, checking state ", existingTorrent);
-            if (existingTorrent.state === null) {
-                //TODO: transactions not ready yet
-                return transactionUtilsService
-                    .executeInTransactionWithResult(deleteAndRestartTorrentChain(existingTorrent, newTorrent));
+            // This torrent is already downloading or terminated
+            var msg = "The provided torrent is already downloading or finished (duplicate): " + existingTorrent.torrentName;
+            if (existingTorrent.state === TorrentState.DOWNLOADING) {
+                log.info("Torrent is already downloading with hash: ", existingTorrent.hash);
             } else {
-                // This torrent is already downloading or terminated
-                var msg = "The provided torrent is already downloading or finished (duplicate): " + existingTorrent.torrentName;
-                if (existingTorrent.state === TorrentState.DOWNLOADING) {
-                    log.info("Torrent is already downloading with hash: ", existingTorrent.hash);
-                    torrentService.updateTorrentsStatus();
-                } else {
-                    log.error("[TORRENT-START] ", msg);
-                    throw {name: 'DUPLICATE_TORRENT', message: msg, status: 400};
-                }
+                log.error("[TORRENT-START] ", msg);
+                throw {name: 'DUPLICATE_TORRENT', message: msg, status: 400};
             }
         }
     }
@@ -224,14 +210,10 @@ torrentService.startDownloadInTransmission = function (torrent) {
     torrent.state = TorrentState.DOWNLOADING;
     torrent.title = torrent.torrentName;
     log.debug('[TORRENT-START] About to persist the starting torrent', torrent);
-    var persistTorrentPromise = torrentService.persistTorrent(torrent);
+    let persistTorrentPromise = torrentService.persistTorrent(torrent);
 
-    log.debug("[TORRENT-START] Launched transmission start in background");
-
-    // This executes asynchronously
-    transmissionService.startTorrent(torrent).then(function (response) {
-        return torrentService.populateTorrentWithResponseData(response, torrent.guid);
-    }).catch(handleErrorStartingTorrent(torrent));
+    log.debug("[TORRENT-START] Sending message to start");
+    tvsterMessageService.startDownload(torrent);
 
     return persistTorrentPromise;
 };
@@ -300,6 +282,22 @@ torrentService.findTorrentsWithState = (state) => {
     });
 };
 
+/**
+ * Torrent failed to start, we need to update to FAILED
+ */
+torrentService.handleErrorStartingTorrent = (torrent) => {
+    return function(error) {
+        return torrentService.handleStartingTorrentError(torrent, error);
+    }
+}
+
+torrentService.handleStartingTorrentError = (torrent, error) => {
+    log.error("An error occurred starting torrent ", torrent.guid, " -- marking as failed: ", error);
+    torrent.state = TorrentState.FAILED;
+    //TODO: throw the error as well, so the API layer picks it
+    return torrentService.updateTorrent(torrent);
+}
+
 // --------------------------------------- PRIVATE -----------------------------------
 
 const repeatRenameCheck = () => {
@@ -344,21 +342,11 @@ function deleteAndRestartTorrentChain(existingTorrent, currentTorrent) {
     return torrentService.deleteTorrent(existingTorrent, true)
                   .then(startTorrentAgain)
                   .then(torrentService.populateTorrentWithResponseData)
-                  .catch(handleErrorStartingTorrent(currentTorrent));
+                  .catch(torrentService.handleErrorStartingTorrent(currentTorrent));
   };
 }
 
-/**
-* Torrent failed to start, we need to update to FAILED
-*/
-function handleErrorStartingTorrent(torrent) {
-  return function(error) {
-    log.error("An error occurred starting torrent ", torrent.guid, " -- marking as failed: ", error);
-    torrent.state = TorrentState.FAILED;
-    //TODO: throw the error as well, so the API layer picks it
-    return torrentService.updateTorrent(torrent);
-  }
-}
+
 
 function createOrUpdateTorrentData(existingTorrent, torrentHash, torrentName, filePath, percentDone) {
   var torrent = {};

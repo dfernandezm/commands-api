@@ -1,7 +1,9 @@
 {
-  "development": {
+  "dev": {
     "dialect" : "mysql",
-    "url": "mysql://root:root@localhost:3307/tvster"
+    "url": "mysql://root:root@localhost:3307/tvster",
+    "downloadsQueueUrl": "https://sqs.eu-west-1.amazonaws.com/086489169253/tvster-commands",
+    "responsesQueueUrl": "https://sqs.eu-west-1.amazonaws.com/086489169253/tvster-commands-responses"
   },
   "staging": {
     "dialect" : "mysql",

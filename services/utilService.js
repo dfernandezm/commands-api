@@ -113,5 +113,8 @@ utilService.getExecutions = (type) => {
 
 };
 
+utilService.isWorker = () => {
+  return process.env.TVSTER_MODE && process.env.TVSTER_MODE === "organizer";
+}
 
 module.exports = utilService;

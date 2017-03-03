@@ -21,4 +21,9 @@ IMAGE=tvster-local-api:1.71
 
 # NODEJS 7.0+ needs to specify the IP in the --debug=IP:PORT if not standard localhost
 docker rm $CONTAINER_NAME -f
-docker run --name $CONTAINER_NAME -v $(pwd):/usr/src/app -p $DEBUG_PORT:5858 -p $PORT:4000 -e TVSTER_MODE=$TVSTER_MODE -e DEBUG=$DEBUG -e MYSQL_PASSWORD= -e MYSQL_URL=$MYSQL_URL -e MYSQL_PORT=$MYSQL_PORT -it $IMAGE $COMMAND
+. ./build/awsCreds.sh
+docker run --name $CONTAINER_NAME \
+-v $(pwd):/usr/src/app -p $DEBUG_PORT:5858 -p $PORT:4000 \
+-e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
+-e TVSTER_MODE=$TVSTER_MODE -e DEBUG=$DEBUG -e MYSQL_PASSWORD= -e MYSQL_URL=$MYSQL_URL -e MYSQL_PORT=$MYSQL_PORT \
+-it $IMAGE $COMMAND

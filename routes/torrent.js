@@ -16,8 +16,8 @@ router.post('/api/torrents/start', function(req, res) {
 
   if (torrent.magnetLink !== null || torrent.torrentFileLink !== null) {
     torrentService.startTorrentDownload(torrent).then(function(downloadingTorrent) {
-      log.info("[TORRENT-API] Torrent successfully started.")
-      torrentService.updateTorrentsStatus();
+      log.info("[TORRENT-API] Torrent successfully started.");
+      //torrentService.updateTorrentsStatus();
       res.json({torrent: downloadingTorrent});
     }).catch(utilService.handleApiError(res));
   } else {
