@@ -17,6 +17,21 @@ tvsterMessageService.startDownload = (torrent) => {
     return sqsService.sendMessage(messageToSend);
 }
 
+tvsterMessageService.startRename = (torrents, mediaCenterSettings) => {
+    let messageToSend = { type: messageTypes.START_RENAME,
+        content: { torrents: torrents, mediaCenterSettings: mediaCenterSettings }
+    };
+    return sqsService.sendMessage(messageToSend);
+}
+
+tvsterMessageService.renameCompleted = (torrentsWithStatus) => {
+    let messageToSend = { type: messageTypes.RENAME_COMPLETED,
+        content: { torrents: torrents, mediaCenterSettings: mediaCenterSettings }
+    };
+    return sqsService.sendMessage(messageToSend);
+}
+
+
 // Executed on the worker
 const handleStartDownloadRequest = (messageContent) => {
     let torrent = messageContent.torrent;
@@ -49,7 +64,9 @@ const sendStartDownloadResponse = (responseObject) => {
         }
     }
 
-    let messageToSend = { type: messageTypes.START_DOWNLOAD_RESPONSE,
+    // Send a response message from the worker setting it as a response to startDownload
+    let messageToSend = { type: messageTypes.RESPONSE,
+                          initiator: messageTypes.START_DOWNLOAD,
                           content: content
                         };
 
@@ -64,9 +81,30 @@ const handleStartDownloadResponse = (messageContent) => {
         return torrentService.populateTorrentWithResponseData(messageContent.response, messageContent.torrent.guid);
     } else {
         //failure
-        debug("Typeeee", torrentService);
         return torrentService.handleStartingTorrentError(messageContent.torrent, messageContent.error);
     }
+} 
+
+// Executed on the worker
+const handleStartRenameRequest = (messageContent) => {
+    // Worker handles the start of the renaming process
+    let statusResult;
+    return workerService.startRename(messageContent.torrents).then((renamingTorrentsHashes) => {
+        statusResult = "success";
+        //return sendStartDownloadResponse({response, torrent, statusResult});
+    }).catch((error) => {
+        statusResult = "failure";
+        //return sendStartDownloadResponse({error, torrent, statusResult});
+    });
+}
+
+const handleStartRenameResponse = (messageContent) => {
+    // API handles a response from START_RENAME (sets the torrent/s as RENAMING)
+}
+
+const handleRenameCompleted = (messageContent) => {
+    // The API handles a rename completed message (sets the torrent/s as RENAMING_COMPLETED) or back
+    // to DOWNLOAD_COMPLETED
 }
 
 const workerMessageReceivedHandler = (rawMessage) => {
@@ -82,12 +120,24 @@ const workerMessageReceivedHandler = (rawMessage) => {
 
 const apiMessageReceivedHandler = (rawMessage) => {
     let message = JSON.parse(rawMessage);
-    switch (message.type) {
-        case messageTypes.START_DOWNLOAD_RESPONSE:
-            handleStartDownloadResponse(message.content);
+
+    if (message.type === messageTypes.RESPONSE) {
+        return handleAllResponseMessages(message);
+    } else {
+        debug("Message type not recognized: {} -- it will be ignored", message.type);
+    }
+}
+
+const handleAllResponseMessages = (message) => {
+    switch (message.initiator) {
+        case messageTypes.START_DOWNLOAD:
+            return handleStartDownloadResponse(message.content);
             break;
+        case messageTypes.START_RENAME:
+            return handleStartRenameResponse(message.content);
         default:
-            debug("Message type not recognized: {} -- it will be ignored", message.type);
+            debug("Message initiator not recognized: {} -- it will be ignored", message.initiator);
+            return {};
     }
 }
 

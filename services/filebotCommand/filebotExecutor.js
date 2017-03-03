@@ -18,18 +18,19 @@ let filebotExecutor = {};
 filebotExecutor.executeRenameTasks = (renameTasks) => {
 
     log.debug("[FILEBOT-EXECUTOR] Executing rename tasks", renameTasks);
-    let filebotProcessingPath = renameTasks[0].processingPath;
-    let symlinkDone = existCustomScriptsSymlinks(filebotProcessingPath);
+
+    //let filebotProcessingPath = renameTasks[0].processingPath;
+    //let symlinkDone = existCustomScriptsSymlinks(filebotProcessingPath);
 
     _.forEach(renameTasks, (renameTask) => {
         log.debug("[FILEBOT-EXECUTOR] Executing rename command task for torrent: ", renameTask.torrentHash);
 
-        if (renameTask.customAmc && !symlinkDone) {
-            log.debug("[FILEBOT-EXECUTOR] Symlinking custom AMC scripts...");
-            symlinkCustomScripts(FILEBOT_SCRIPTS_PATH, filebotProcessingPath);
-            symlinkDone = true;
-        }
-
+        // === No symlinks now, common AMC script ===
+        // if (renameTask.customAmc && !symlinkDone) {
+        //     log.debug("[FILEBOT-EXECUTOR] Symlinking custom AMC scripts...");
+        //     symlinkCustomScripts(FILEBOT_SCRIPTS_PATH, filebotProcessingPath);
+        //     symlinkDone = true;
+        // }
         executeFilebotCommand(renameTask.command, renameTask.torrentHash, true);
     });
 };
@@ -37,9 +38,8 @@ filebotExecutor.executeRenameTasks = (renameTasks) => {
 // =========================================================================================================================
 
 function executeFilebotCommand(filebotCommand, torrentHash, isRenamer) {
-
     log.debug("[FILEBOT-EXECUTOR] Executing Filebot command: ", filebotCommand);
-    var filebotProcess = executeFilebotCommandInSpawnedProcess(filebotCommand);
+    let filebotProcess = executeFilebotCommandInSpawnedProcess(filebotCommand);
 
     if (filebotProcess !== null) {
         startMonitoringFilebotProcess(filebotProcess, torrentHash, isRenamer);
@@ -113,43 +113,60 @@ function startMonitoringFilebotProcess(filebotProcess, torrentHash, isRenamer) {
 };
 
 function processTorrentPostRename(renamerExitCode, completedRenames, torrentHash) {
+    let renamedTorrentsWithStatus = {};
+
+    if (!renamedTorrentsWithStatus[torrentHash]) {
+        renamedTorrentsWithStatus[torrentHash] = [];
+    }
 
     if (renamerExitCode == 0) {
 
         log.info(`[FILEBOT-RENAMER-FINISHED] Successful renamed torrent hash ${torrentHash}`);
         log.info("[FILEBOT-RENAMER-FINISHED] Completed renames: " + JSON.stringify(completedRenames));
 
-        var completedRenamesForTorrent = completedRenames[torrentHash];
-        var renamedPaths = [];
-        var renamedError = false;
+        let completedRenamesForTorrent = completedRenames[torrentHash];
+        let renamedPaths = [];
+        let renamedError = false;
 
         _.forEach(completedRenamesForTorrent, (completedRename) => {
-
             try {
                 fs.accessSync(completedRename.renamedPath);
-                renamedPaths.push(completedRename.renamedPath);
+                renamedTorrentsWithStatus[torrentHash].push({
+                    renameData: completedRename,
+                    status: "success"
+                });
             } catch (err) {
                 log.warn(`Renamed file does not exist: ${completedRename.renamedPath}, setting ${torrentHash} back to 
                           DOWNLOAD_COMPLETED`, err);
                 // Put back to download completed
                 renamedError = true;
+                renamedTorrentsWithStatus[torrentHash].push({
+                   error: `Renamed file does not exist: ${completedRename.renamedPath}`,
+                   status: "error"
+                });
             }
         });
 
         if (!renamedError) {
             log.info(`Renamer completed for torrent ${torrentHash} -- RENAMING_COMPLETED`);
-            return torrentService.completeTorrentRename(torrentHash, renamedPaths.join(';'));
+            //return torrentService.completeTorrentRename(torrentHash, renamedPaths.join(';'));
         } else {
             log.warn(`Detected renamer error, setting torrent ${torrentHash} back to DOWNLOAD_COMPLETED`);
-            return torrentService.saveTorrentWithStateUsingHash(torrentHash, TorrentState.DOWNLOAD_COMPLETED);
+            //return torrentService.saveTorrentWithStateUsingHash(torrentHash, TorrentState.DOWNLOAD_COMPLETED);
         }
 
     } else {
 
         log.info(`[FILEBOT-RENAMER-ERRORED] Exited with code: ${exitCode}`);
         // Put back to download completed
-        return torrentService.saveTorrentWithStateUsingHash(torrentHash, TorrentState.DOWNLOAD_COMPLETED);
+        renamedTorrentsWithStatus[torrentHash].push({
+            error: `Renamer exited with code: ${exitCode}`,
+            status: "error"
+        });
+
+        //return torrentService.saveTorrentWithStateUsingHash(torrentHash, TorrentState.DOWNLOAD_COMPLETED);
     }
+    return renamedTorrentsWithStatus;
 }
 
 function symlinkCustomScripts(filebotScriptsPath, processingTempPath) {

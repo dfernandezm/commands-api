@@ -449,13 +449,37 @@ function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
 
         if (torrentState === TorrentState.DOWNLOAD_COMPLETED) {
             log.info("Checking renamer...");
-            getFilebotService().renameChecking();
+            renameCheck();
         }
     });
+}
+
+const renameCheck = () => {
+    log.debug("Running renameCheck... ");
+    return torrentService.findTorrentsWithState(TorrentState.RENAMING)
+        .then(startRenamer);
+}
+
+const startRenamer = (renamingTorrents) => {
+    if (renamingTorrents == null || renamingTorrents.length == 0) {
+        log.info("[RENAMER] Checking if there are torrents to rename...");
+        // Find torrents in DOWNLOAD_COMPLETED state
+        return torrentService.findTorrentsWithState(TorrentState.DOWNLOAD_COMPLETED).then((torrents) => {
+            if (torrents && torrents.length > 0) {
+                return tvsterMessageService.startRename(torrents);
+            } else {
+                log.info("[RENAMER] There is no torrents to rename");
+                return null;
+            }
+        });
+    } else {
+        log.warn("Torrents are already renaming", renamingTorrents);
+    }
 }
 
 function getFilebotService() {
     return require('./filebotService');
 }
+
 
 module.exports = torrentService;

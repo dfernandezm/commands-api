@@ -11,5 +11,8 @@ workerService.startDownload = (torrent) => {
     return transmissionService.startTorrent(torrent);
 }
 
+workerService.startRename = (torrents) => {
+    return filebotService.renameFromWorker(torrents);
+}
 
 module.exports = workerService;

@@ -3,7 +3,8 @@
 export DEBUG=*
 export TVSTER_MODE=$1
 export CONTAINER_NAME=$2
-export MYSQL_URL=192.168.1.64
+#export MYSQL_URL=192.168.1.64
+export MYSQL_URL=10.209.0.99
 export MYSQL_PORT=3307
 
 if [[ "$TVSTER_MODE" == "organizer" ]]; then
