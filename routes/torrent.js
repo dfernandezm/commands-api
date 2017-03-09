@@ -58,6 +58,7 @@ router.put('/api/torrents/resume/:hash', function(req, res) {
 
 router.put('/api/torrents/rename/:hash', function(req, res) {
   var torrentHash = req.params.hash;
+  log.info("The hash is " + torrentHash);
   filebotService.renameTorrent(torrentHash).then(function(result) {
     res.json({job: result});
   }).catch(utilService.handleApiError(res));

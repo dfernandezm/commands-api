@@ -8,6 +8,8 @@ var FILEBOT_SCRIPTS_PATH = __dirname + "/scripts";
 var spawn = require('child_process').spawn;
 var torrentService = require('../torrentService');
 var TorrentState = require('../torrentState');
+const tvsterMessageService = require("../sqs/tvsterMessageService");
+let debug =  require("debug")("services:filebotExecutor");
 
 // Filebot response
 var pathMovedPattern = /\[MOVE\]\s+Rename\s+(.*)to\s+\[(.*)\]/;
@@ -54,7 +56,10 @@ function executeFilebotCommandInSpawnedProcess(filebotCommand) {
         let args = filebotCommand.argumentsArray();
         log.debug("[FILEBOT-EXECUTOR] Executable is: [" + executable + "]");
         log.debug("[FILEBOT-EXECUTOR] Arguments are: [" + args.join(" ") + "]");
-        return spawn(executable, args);
+        return spawn(executable, args).on('error', (err) => {
+            debug("Error spawning process", err);
+            return null;
+        });
     } catch (err) {
         log.error("Error occurred spawning Filebot process ", err);
         return null;
@@ -85,7 +90,6 @@ function startMonitoringFilebotProcess(filebotProcess, torrentHash, isRenamer) {
 
                     completedRenames[torrentHash].push({
                         type: 'RENAME',
-                        torrentHash: torrentHash,
                         original: originalPath,
                         renamedPath: renamedPath
                     });
@@ -104,11 +108,15 @@ function startMonitoringFilebotProcess(filebotProcess, torrentHash, isRenamer) {
             log.info("Filebot Process exited with code: " + exitCode);
 
             if (isRenamer) {
-                processTorrentPostRename(exitCode, completedRenames, torrentHash);
+                let renamedTorrentsWithStatus = processTorrentPostRename(exitCode, completedRenames, torrentHash);
+                tvsterMessageService.renameCompleted(renamedTorrentsWithStatus);
+                debug(" >>>>>>> Sent rename completed");
             } else {
                 //TODO: is subtitles
             }
+
         });
+
     });
 };
 
@@ -125,7 +133,6 @@ function processTorrentPostRename(renamerExitCode, completedRenames, torrentHash
         log.info("[FILEBOT-RENAMER-FINISHED] Completed renames: " + JSON.stringify(completedRenames));
 
         let completedRenamesForTorrent = completedRenames[torrentHash];
-        let renamedPaths = [];
         let renamedError = false;
 
         _.forEach(completedRenamesForTorrent, (completedRename) => {
@@ -157,10 +164,10 @@ function processTorrentPostRename(renamerExitCode, completedRenames, torrentHash
 
     } else {
 
-        log.info(`[FILEBOT-RENAMER-ERRORED] Exited with code: ${exitCode}`);
+        log.info(`[FILEBOT-RENAMER-ERRORED] Exited with code: ${renamerExitCode}`);
         // Put back to download completed
         renamedTorrentsWithStatus[torrentHash].push({
-            error: `Renamer exited with code: ${exitCode}`,
+            error: `Renamer exited with code: ${renamerExitCode}`,
             status: "error"
         });
 

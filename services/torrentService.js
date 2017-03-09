@@ -244,7 +244,7 @@ torrentService.populateTorrentWithResponseData = function(startTorrentResponse, 
 
 torrentService.saveTorrentWithState = function(torrent, torrentState) {
   return torrentService.findByHash(torrent.hash).then(function(torrentFound) {
-    if (torrentFound == null) {
+    if (torrentFound === null) {
       return torrentService.persistTorrent(torrent);
     } else {
       torrentFound.state = torrentState;
@@ -270,7 +270,7 @@ torrentService.completeTorrentRename = function (torrentHash, renamedPathsAsStri
         torrent.state = TorrentState.RENAMING_COMPLETED;
 
         //TODO: Mark the job as completed
-        return torrent.save().then(repeatRenameCheck());
+        return torrent.save();
     });
 };
 
@@ -475,6 +475,13 @@ const startRenamer = (renamingTorrents) => {
     } else {
         log.warn("Torrents are already renaming", renamingTorrents);
     }
+}
+
+torrentService.setTorrentAsRenaming = (torrentHash) => {
+    return torrentService.findByHash(torrentHash).then(function (torrent) {
+        torrent.state = TorrentState.RENAMING;
+        return torrent.save();
+    });
 }
 
 function getFilebotService() {

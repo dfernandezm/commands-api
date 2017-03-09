@@ -11,6 +11,7 @@ var jobService = require('./jobService');
 var TorrentState = require('./torrentState');
 var torrentService = require('./torrentService');
 var filebotExecutor = require('./filebotCommand/filebotExecutor');
+const tvsterMessageService = require("./sqs/tvsterMessageService");
 let debug =  require("debug")("services:filebotService");
 
 var AMC_SCRIPT_NAME = 'amc.groovy';
@@ -18,8 +19,17 @@ var AMC_SCRIPT_NAME = 'amc.groovy';
 var filebotService = {};
 
 filebotService.renameTorrent = function (torrentHash) {
-    return torrentService.findByHash(torrentHash).then(function (torrent) {
-        return filebotService.rename([torrent]);
+    let torrentsToRename = [];
+    return torrentService.findByHash(torrentHash).then(torrent => {
+        if (torrent) {
+            torrentsToRename.push(torrent);
+            return settingsService.getDefaultMediacenterSettings().then(settings => {
+                return tvsterMessageService.startRename(torrentsToRename, settings);
+            });
+        } else {
+            throw new Error("No torrent found for hash " + torrentHash);
+        }
+
     });
 };
 
@@ -242,10 +252,11 @@ filebotService.renameFromWorker = (torrents, mediacenterSettings) => {
                 log.debug("Rename specs ---> :", renameTasks);
                 filebotExecutor.executeRenameTasks(renameTasks);
             });
+            debug("Renaming torrent hashes is %o", renamingTorrentsHashes);
             return resolve(renamingTorrentsHashes);
         } else {
-            log.warn("No torrents selected to rename -- it is likely renamer already started");
-            return reject({message: "No torrents selected to rename", state: "NOT_CREATED"});
+            log.warn("No torrents selected to rename");
+            return reject({message: "No torrents selected to rename", state: "NOT_CREATED", torrents: torrents});
         }
     });
 }

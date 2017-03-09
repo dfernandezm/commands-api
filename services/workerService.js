@@ -3,7 +3,7 @@
  */
 const debug = require("debug")("services:worker");
 const transmissionService = require("./transmissionService");
-const filebotService = require("./filebotService");
+
 
 const workerService = {};
 
@@ -11,8 +11,13 @@ workerService.startDownload = (torrent) => {
     return transmissionService.startTorrent(torrent);
 }
 
-workerService.startRename = (torrents) => {
-    return filebotService.renameFromWorker(torrents);
+workerService.startRename = (torrents, mediacenterSettings) => {
+    const filebotService = require("./filebotService");
+    debug("MediacenterSettings", mediacenterSettings);
+    return filebotService.renameFromWorker(torrents, mediacenterSettings).catch((err) => {
+        debug("Error is ", err);
+        throw err;
+    });
 }
 
 module.exports = workerService;

@@ -1,6 +1,6 @@
 var fs        = require("fs");
 var path      = require("path");
-
+let debug = require("debug")("models:sequelize-init");
 var db = {};
 
 if (!process.env.TVSTER_MODE || process.env.TVSTER_MODE !== 'organizer') {
@@ -20,6 +20,7 @@ if (!process.env.TVSTER_MODE || process.env.TVSTER_MODE !== 'organizer') {
     }
 
     config.url = "mysql://root" + passwordPart + "@" + process.env.MYSQL_URL + ":" + process.env.MYSQL_PORT + "/tvster";
+    debug(">>>> Database URL is", config.url);
     var sequelize = new Sequelize(config.url);
 
 
