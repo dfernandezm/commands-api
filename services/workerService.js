@@ -3,12 +3,24 @@
  */
 const debug = require("debug")("services:worker");
 const transmissionService = require("./transmissionService");
-
-
 const workerService = {};
 
 workerService.startDownload = (torrent) => {
     return transmissionService.startTorrent(torrent);
+}
+
+workerService.pauseDownload = (torrentHash) => {
+    return transmissionService.pauseTorrent(torrentHash);
+}
+
+workerService.resumeDownload = (torrentHash) => {
+    return transmissionService.resumeTorrent(torrentHash);
+}
+
+workerService.getStatus = () => {
+    return transmissionService.status().then((data) => {
+        return data.arguments.torrents;
+    });
 }
 
 workerService.startRename = (torrents, mediacenterSettings) => {

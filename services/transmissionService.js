@@ -58,7 +58,6 @@ transmissionService.startTorrent = function(torrent) {
 }
 
 transmissionService.status = function() {
-
   log.debug("Getting status from Transmission");
   var request = { fields:['id', 'name', 'totalSize', 'percentDone', 'hashString',
                            'torrentFile', 'magnetLink', 'rateDownload',
@@ -81,17 +80,15 @@ transmissionService.relocateAndRestart = function(torrentName, torrentHash) {
 
   log.info("Relocating torrent... " + torrentName);
 
-  var torrentSubfolderPath = getTorrentSubfolderPath(torrentName, torrentHash);
+  //TODO: pass in the downloading path
+  var newPath = getDownloadingTorrentsSubfolderPath("/mediacenter/torrents", torrentName, torrentHash);
   var restartTorrent = transmissionService.startTorrentNow(torrentHash);
-
-  return torrentSubfolderPath.then(function(newPath) {
     return transmissionService.setTorrentLocation(torrentHash, newPath).then(function(stl) {
       return restartTorrent.then(function(rt) {
         log.debug("Torrent restarted!");
         return newPath;
       });
-    })
-  }).catch(transmissionService.returnErrorAndCancelTorrent(torrentHash));
+    }).catch(transmissionService.returnErrorAndCancelTorrent(torrentHash));
 }
 
 /**
@@ -158,17 +155,23 @@ function getTorrentSubfolderPath(torrentName, torrentHash) {
                         .then(composeRelocatePath(torrentName, torrentHash));
 }
 
+
+
 /**
 * This function returns the function that 'then' wants, but also adds some extra
 * information via closure binding.
 */
 function composeRelocatePath(torrentName, torrentHash) {
   return function (transmissionSettings) {
-    var newPath = transmissionSettings.baseDownloadsDir + "/" +
-                  torrentName + "_" + torrentHash;
+    return getDownloadingTorrentsSubfolderPath(transmissionSettings.baseDownloadsDir, torrentName, torrentHash);
+  }
+}
+
+const getDownloadingTorrentsSubfolderPath = (baseDownloadsDir, torrentName, torrentHash) => {
+    var newPath = baseDownloadsDir + "/" +
+        torrentName + "_" + torrentHash;
     log.info("New Path to relocate is: " + newPath);
     return newPath;
-  }
 }
 
 module.exports = transmissionService;

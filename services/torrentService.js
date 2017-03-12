@@ -44,10 +44,10 @@ torrentService.getCurrentStatus = function() {
 };
 
 torrentService.updateTorrentsStatus = function() {
-  utilService.startNewInterval('torrentsStatus', torrentService.updateDataForTorrents, 4000);
+  utilService.startNewInterval('torrentsStatus', torrentService.requestStatus, 5000);
 };
 
-torrentService.updateDataForTorrents = function() {
+torrentService.updateDataForTorrentsOld = function() {
   log.debug("Updating torrents..");
   transmissionService.status().then(function(data) {
     var torrentsResponse = data.arguments.torrents;
@@ -63,6 +63,25 @@ torrentService.updateDataForTorrents = function() {
     }
   });
 }
+
+torrentService.requestStatus = () => {
+    return tvsterMessageService.getStatus();
+}
+
+// In response to a STATUS request
+torrentService.updateDbWithTorrentDataFromTransmission = function(torrentsResponse) {
+    if (torrentsResponse.length == 0) {
+        log.debug("Torrent response from transmission is empty -- no torrents added or downloading");
+        utilService.stopInterval('torrentsStatus');
+    } else {
+        Promise.map(torrentsResponse, function(oneTorrentResponse) {
+            // Promise.map awaits for returned promises as well.
+            log.debug("Processing response for torrent hash: ", oneTorrentResponse.hashString);
+            return processSingleTorrentResponse(oneTorrentResponse);
+        });
+    }
+}
+
 
 torrentService.findByHash = function(torrentHash) {
   //noinspection JSUnresolvedFunction
@@ -87,27 +106,24 @@ torrentService.updateTorrentUsingHash = function(torrent) {
 }
 
 torrentService.pauseTorrent = function(torrentHash) {
-  log.debug("About to pause: ", torrentHash);
-	return transmissionService.pauseTorrent(torrentHash).then(function() {
-    log.debug("Pausing torrent: ", torrentHash);
-    var torrent = {};
-    torrent.state = TorrentState.PAUSED;
-    torrent.hash = torrentHash;
-    return torrentService.updateTorrentUsingHash(torrent);
-  });
+    log.debug("About to pause torrent: ", torrentHash);
+    return tvsterMessageService.pauseDownload(torrentHash);
+}
+
+torrentService.setTorrentAsPaused = (torrentHash) => {
+    return torrentService.saveTorrentWithStateUsingHash(torrentHash, TorrentState.PAUSED);
+}
+
+torrentService.setTorrentAsDownloading = (torrentHash) => {
+    return torrentService.saveTorrentWithStateUsingHash(torrentHash, TorrentState.DOWNLOADING);
 }
 
 torrentService.resumeTorrent = function(torrentHash) {
-    return transmissionService.resumeTorrent(torrentHash).then(function() {
-    var torrent = {};
-    torrent.hash = torrentHash;
     log.debug("Resuming torrent: ", torrentHash);
-        torrent.state = TorrentState.DOWNLOADING;
     process.nextTick(function () {
-      torrentService.updateTorrentsStatus();
+        torrentService.updateTorrentsStatus();
     });
-	  return torrentService.updateTorrentUsingHash(torrent);
-	});
+    return tvsterMessageService.resumeDownload(torrentHash);
 }
 
 torrentService.findTorrentByFileLink = function(fileLink) {
@@ -209,13 +225,12 @@ torrentService.deleteTorrent = function(torrentHash, deleteInTransmission) {
 torrentService.startDownloadInTransmission = function (torrent) {
     torrent.state = TorrentState.DOWNLOADING;
     torrent.title = torrent.torrentName;
+
     log.debug('[TORRENT-START] About to persist the starting torrent', torrent);
-    let persistTorrentPromise = torrentService.persistTorrent(torrent);
+    torrentService.persistTorrent(torrent); // Not waiting for it
 
     log.debug("[TORRENT-START] Sending message to start");
-    tvsterMessageService.startDownload(torrent);
-
-    return persistTorrentPromise;
+    return tvsterMessageService.startDownload(torrent);
 };
 
 /**
@@ -229,7 +244,6 @@ torrentService.populateTorrentWithResponseData = function(startTorrentResponse, 
     // Values coming from transmission start call
     var filePath = startTorrentResponse.filePath;
     var torrentResponse = startTorrentResponse.torrentResponse;
-
     var torrentName = torrentResponse.name.replace('+','.');
     torrentName = torrentName.replace(' ', '.');
     var torrentHash = torrentResponse.hashString;
@@ -395,10 +409,10 @@ function createOrUpdateTorrentClosure(torrentResponse, torrentHash) {
 function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
 
     var torrentState = existingTorrent.state;
-    log.debug(">>> Percent in response is: ", torrentResponse.percentDone);
+    log.debug(">>> Percent in response is: " + torrentResponse.percentDone);
     var percent = 100 * torrentResponse.percentDone;
     var percentDone = Math.round(100 * percent) / 100;
-    log.debug(">>> Percent: ", percentDone);
+    log.debug("Calculated percent: " + percentDone);
     existingTorrent.magnetLink = torrentResponse.magnetLink;
     var torrentName = existingTorrent.torrentName;
     var currentPercent = existingTorrent.percentDone;
@@ -456,8 +470,9 @@ function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
 
 const renameCheck = () => {
     log.debug("Running renameCheck... ");
-    return torrentService.findTorrentsWithState(TorrentState.RENAMING)
-        .then(startRenamer);
+    //TODO: enable when renamer ready
+    // return torrentService.findTorrentsWithState(TorrentState.RENAMING)
+    //     .then(startRenamer);
 }
 
 const startRenamer = (renamingTorrents) => {

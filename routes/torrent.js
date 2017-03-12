@@ -17,8 +17,8 @@ router.post('/api/torrents/start', function(req, res) {
   if (torrent.magnetLink !== null || torrent.torrentFileLink !== null) {
     torrentService.startTorrentDownload(torrent).then(function(downloadingTorrent) {
       log.info("[TORRENT-API] Torrent successfully started.");
-      //torrentService.updateTorrentsStatus();
       res.json({torrent: downloadingTorrent});
+      torrentService.updateTorrentsStatus();
     }).catch(utilService.handleApiError(res));
   } else {
     utilService.generateErrorResponse(res, "INVALID_TORRENT", 400,
@@ -30,6 +30,7 @@ router.put('/api/torrents/status', function(req, res) {
   torrentService.getCurrentStatus().then(function(result) {
     var jsonResult = JSON.stringify(result, utilService.jsonSerializer);
     res.json({torrents: JSON.parse(jsonResult)});
+    torrentService.updateTorrentsStatus();
   }).catch(utilService.handleApiError(res));
 });
 

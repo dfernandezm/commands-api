@@ -2,6 +2,7 @@ var log = require('./logger');
 var uuid = require('node-uuid');
 var _ = require('lodash');
 var Promise = require('bluebird');
+
 Promise.onPossiblyUnhandledRejection(function (error) {
   throw error;
 });
