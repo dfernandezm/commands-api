@@ -17,6 +17,10 @@ workerService.resumeDownload = (torrentHash) => {
     return transmissionService.resumeTorrent(torrentHash);
 }
 
+workerService.cancelDownload = (torrentHash) => {
+    return transmissionService.cancelTorrent(torrentHash);
+}
+
 workerService.getStatus = () => {
     return transmissionService.status().then((data) => {
         return data.arguments.torrents;

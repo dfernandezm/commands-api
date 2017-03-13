@@ -22,6 +22,11 @@ downloadOperationHandlers.resumeDownload = (torrentHash) => {
     return sendRequestMessage(messageTypes.RESUME_DOWNLOAD, { torrentHash: torrentHash });
 }
 
+downloadOperationHandlers.cancelDownload = (torrentHash) => {
+    return sendRequestMessage(messageTypes.CANCEL_DOWNLOAD, { torrentHash: torrentHash });
+}
+
+
 downloadOperationHandlers.getStatusFromTransmission = () => {
    return sendRequestMessage(messageTypes.STATUS, {});
 }
@@ -66,6 +71,35 @@ downloadOperationHandlers.handlePauseDownloadResponse = (messageContent) => {
         debug("Could not pause torrent", messageContent.error);
     }
 }
+
+// On the worker, cancel the torrent, and send response back to API
+downloadOperationHandlers.handleCancelDownloadRequest = (messageContent) => {
+    let torrentHash = messageContent.torrentHash;
+
+    // function that when invoked decorates any result obtained with extra data to send in
+    // then message content
+    let successfulResponseGenerator = (cancelResult) => {
+        cancelResult.torrentHash = torrentHash;
+        return cancelResult;
+    };
+
+    let successClosure = getResponseSuccessClosure(messageTypes.CANCEL_DOWNLOAD, successfulResponseGenerator);
+    let errorClosure = getResponseErrorClosure(messageTypes.CANCEL_DOWNLOAD);
+    return handleRequest(workerService.cancelDownload(torrentHash), successClosure, errorClosure);
+}
+
+// On API, handle response from worker after pausing
+downloadOperationHandlers.handleCancelDownloadResponse = (messageContent) => {
+    debug("Received response from Cancel Download", messageContent);
+    const torrentService = require("../torrentService");
+    if (messageContent.result === "success") {
+        return torrentService.delete(messageContent.torrentHash);
+    } else {
+        // Failure
+        debug("Could cancel torrent", messageContent.error);
+    }
+}
+
 
 // Worker
 downloadOperationHandlers.handleStatusRequest = () => {

@@ -215,10 +215,7 @@ torrentService.deleteTorrent = function(torrentHash, deleteInTransmission) {
   if (!deleteInTransmission) {
      return torrentService.delete(torrentHash);
   } else {
-     return transmissionService.cancelTorrent(torrentHash).then(function() {
-       log.debug(" ======= CANCELLED IN TRANSMISSION ======");
-       return torrentService.delete(torrentHash);
-     });
+     return tvsterMessageService.cancelDownload(torrentHash);
   }
 }
 

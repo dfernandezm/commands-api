@@ -25,6 +25,10 @@ tvsterMessageService.resumeDownload = (torrentHash) => {
     return downloadOperationHandlers.resumeDownload(torrentHash);
 }
 
+tvsterMessageService.cancelDownload = (torrentHash) => {
+    return downloadOperationHandlers.cancelDownload(torrentHash);
+}
+
 tvsterMessageService.startRename = (torrents, mediaCenterSettings) => {
     return renameOperationHandlers.startRename(torrents, mediaCenterSettings);
 }
@@ -40,6 +44,9 @@ const workerMessageReceivedHandler = (rawMessage) => {
             break;
         case messageTypes.RESUME_DOWNLOAD:
             downloadOperationHandlers.handleResumeDownloadRequest(message.content);
+            break;
+        case messageTypes.CANCEL_DOWNLOAD:
+            downloadOperationHandlers.handleCancelDownloadRequest(message.content);
             break;
         case messageTypes.STATUS:
             downloadOperationHandlers.handleStatusRequest();
@@ -75,6 +82,9 @@ const handleAllResponseMessages = (message) => {
             break;
         case messageTypes.RESUME_DOWNLOAD:
             return downloadOperationHandlers.handleResumeDownloadResponse(message.content);
+            break;
+        case messageTypes.CANCEL_DOWNLOAD:
+            return downloadOperationHandlers.handleCancelDownloadResponse(message.content);
             break;
         case messageTypes.STATUS:
             return downloadOperationHandlers.handleStatusResponse(message.content);
