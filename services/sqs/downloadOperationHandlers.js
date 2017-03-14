@@ -88,15 +88,16 @@ downloadOperationHandlers.handleCancelDownloadRequest = (messageContent) => {
     return handleRequest(workerService.cancelDownload(torrentHash), successClosure, errorClosure);
 }
 
-// On API, handle response from worker after pausing
+// On API, handle response from worker after cancelling
 downloadOperationHandlers.handleCancelDownloadResponse = (messageContent) => {
     debug("Received response from Cancel Download", messageContent);
     const torrentService = require("../torrentService");
     if (messageContent.result === "success") {
-        return torrentService.delete(messageContent.torrentHash);
+        debug("Successfully cancelled torrent in Transmission", messageContent.torrentHash);
+        return messageContent.torrentHash;
     } else {
         // Failure
-        debug("Could cancel torrent", messageContent.error);
+        debug("Could not cancel torrent", messageContent.error);
     }
 }
 

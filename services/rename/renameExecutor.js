@@ -8,7 +8,7 @@ const debug = require("debug")("services/rename:renameExecutor");
 
 const renameExecutor = {};
 
-const pathMovedPattern = /\[MOVE\]\s+Rename\s+(.*)to\s+\[(.*)\]/;
+const pathMovedPattern = /\[MOVE\]\s+Rename\s+\[(.*)\]\s+to\s+\[(.*)\]/;
 const hashRegex = /_([\w]{40})/;
 
 renameExecutor.executeFilebotRenameScript = (renameCommandParameters) => {
@@ -38,7 +38,7 @@ renameExecutor.startMonitoringRenamer = (filebotProcess, isRenamer) => {
     // Give the chance to run other tasks by deferring process listeners
     process.nextTick(() => {
 
-        let completedRenames = [];
+        let completedRenames = {};
 
         filebotProcess.stdout.on('data', function (data) {
             const dataStr = data.toString('utf8');
@@ -94,7 +94,7 @@ renameExecutor.startMonitoringRenamer = (filebotProcess, isRenamer) => {
                 } else {
                     tvsterMessageService.renameCompleted({status: "success", renamedTorrents: completedRenames});
                 }
-                debug("Sent rename completed");
+                debug("========Sent rename completed========");
             } else {
                 //TODO: is subtitles
             }

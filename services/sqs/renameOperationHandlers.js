@@ -23,7 +23,7 @@ renameOperationHandlers.renameCompleted = (renamedTorrents) => {
     return sendRequestMessage(messageTypes.RENAME_COMPLETED, content);
 }
 
-// Worker: starts a renaming process (if not already running)
+// Worker: starts a renaming process (if not already running, TODO)
 renameOperationHandlers.handleStartRenameRequest = (messageContent) => {
     // Worker handles the start of the renaming process
     let statusResult;
@@ -68,34 +68,43 @@ renameOperationHandlers.handleStartRenameResponse = (messageContent) => {
 // The API handles a rename completed message (sets the torrent/s as RENAMING_COMPLETED) or back
 // to DOWNLOAD_COMPLETED (the renamedTorrents collection comes from renameExecutor)
 renameOperationHandlers.handleRenameCompleted = (messageContent) => {
-    let renamedTorrents = messageContent.renamedTorrents;
+
+    debug("Renamed torrents raw message %s", JSON.stringify(messageContent));
     const torrentService = require("../torrentService");
-    let torrentState = TorrentState.RENAMING_COMPLETED;
-    debug("Renamed torrents are", renamedTorrents);
-    return Promise.map(Object.keys(renamedTorrents), (torrentHash) => {
+    let renamedTorrents = messageContent.renamedTorrents.renamedTorrents;
+    let status = messageContent.renamedTorrents.status;
 
-        debug("Renamed torrent %s", torrentHash);
+    for (let torrentHash in renamedTorrents) {
+        if (renamedTorrents.hasOwnProperty(torrentHash)) {
+            let torrentRenames = renamedTorrents[torrentHash];
+            let torrent = {};
 
-        let completedRenamesOrErrorForTorrent = renamedTorrents[torrentHash];
-        let renamedPaths = [];
-        for (let completedRenameOrError of completedRenamesOrErrorForTorrent) {
-            if (completedRenameOrError.status === "error") {
-                //Error - set back to DOWNLOAD_COMPLETED
-                debug("Torrent %s failed renaming, setting back as DOWNLOAD_COMPLETED", torrentHash);
-                torrentState = TorrentState.DOWNLOAD_COMPLETED;
-                break;
+            if (status === "failure") {
+                let torrent = {};
+                torrent.hash = torrentHash;
+                torrent.state = TorrentState.RENAMING_COMPLETED;
             } else {
-                //TODO: Handle multiple file torrent
-                //TODO: Update renamed paths
-                debug("Torrent %s successfully renamed, setting as RENAMING_COMPLETED", torrentHash);
-                renamedPaths.push(completedRenameOrError.renamedPath);
-            }
-        }
+                debug("Torrent hash %s", torrentHash);
+                let renamedPaths = torrentRenames.map((rename) => {
+                    return rename.renamedPath;
+                });
 
-        return torrentService.saveTorrentWithStateUsingHash(torrentHash, torrentState).catch(err => {
-            debug("Error saving torrent %s state %s - %s", torrentHash, torrentState, JSON.stringify(err));
-        });
-    });
+                let separatedRenamedPaths = renamedPaths.join(";");
+
+                debug("Torrent %s successfully renamed, setting as RENAMING_COMPLETED, renamed paths are %s", torrentHash, separatedRenamedPaths);
+                torrent.hash = torrentHash;
+                torrent.state = TorrentState.RENAMING_COMPLETED;
+                torrent.renamedPath = separatedRenamedPaths;
+            }
+
+            torrentService.updateTorrentUsingHash(torrent).then(() => {
+                if (torrent.state === TorrentState.RENAMING_COMPLETED) {
+                    debug("Clearing RENAMING_COMPLETED torrent %s from tranmission");
+                    return torrentService.cancelTorrentInTransmission(torrentHash);
+                }
+            });
+        }
+    }
 }
 
 // TODO: factor these functions

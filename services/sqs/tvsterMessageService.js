@@ -69,9 +69,7 @@ const apiMessageReceivedHandler = (rawMessage) => {
         case messageTypes.RESPONSE:
             return handleAllResponseMessages(message);
         case messageTypes.RENAME_COMPLETED:
-            debug("Rename completed: %o", message);
-            break;
-            //return renameOperationHandlers.handleRenameCompleted(message.content);
+            return renameOperationHandlers.handleRenameCompleted(message.content);
         default:
             debug("Message type not recognized: {} -- it will be ignored", message.type);
     }
@@ -81,19 +79,14 @@ const handleAllResponseMessages = (message) => {
     switch (message.initiator) {
         case messageTypes.START_DOWNLOAD:
             return downloadOperationHandlers.handleStartDownloadResponse(message.content);
-            break;
         case messageTypes.PAUSE_DOWNLOAD:
             return downloadOperationHandlers.handlePauseDownloadResponse(message.content);
-            break;
         case messageTypes.RESUME_DOWNLOAD:
             return downloadOperationHandlers.handleResumeDownloadResponse(message.content);
-            break;
         case messageTypes.CANCEL_DOWNLOAD:
             return downloadOperationHandlers.handleCancelDownloadResponse(message.content);
-            break;
         case messageTypes.STATUS:
             return downloadOperationHandlers.handleStatusResponse(message.content);
-            break;
         case messageTypes.START_RENAME:
             return renameOperationHandlers.handleStartRenameResponse(message.content);
         default:

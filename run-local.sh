@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export DEBUG=*
+export DEBUG=services*
 export TVSTER_MODE=$1
 export CONTAINER_NAME=$2
 export MYSQL_URL=192.168.1.64

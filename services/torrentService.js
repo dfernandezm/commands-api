@@ -105,12 +105,10 @@ torrentService.updateTorrent = function(torrent) {
 }
 
 torrentService.updateTorrentUsingHash = function(torrent) {
-    log.debug("Searching hash ", torrent.hash);
     return torrentService.findByHash(torrent.hash).then(mapAndUpdateTorrent(torrent));
 }
 
 torrentService.pauseTorrent = function(torrentHash) {
-    log.debug("About to pause torrent: ", torrentHash);
     return tvsterMessageService.pauseDownload(torrentHash);
 }
 
@@ -219,8 +217,15 @@ torrentService.deleteTorrent = function(torrentHash, deleteInTransmission) {
   if (!deleteInTransmission) {
      return torrentService.delete(torrentHash);
   } else {
-     return tvsterMessageService.cancelDownload(torrentHash);
+     return tvsterMessageService.cancelDownload(torrentHash).then(() => {
+         // Deleting torrent in DB
+         return torrentService.delete(torrentHash);
+     });
   }
+}
+
+torrentService.cancelTorrentInTransmission = (torrentHash) => {
+    return tvsterMessageService.cancelDownload(torrentHash);
 }
 
 torrentService.startDownloadInTransmission = function (torrent) {
@@ -459,7 +464,7 @@ function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
         // Clear finished torrents from Transmission directly
         if (torrentState === TorrentState.RENAMING_COMPLETED || torrentState === TorrentState.COMPLETED) {
             log.info("Torrent " + savedTorrent.hash + ": " + torrentState + " -- removing from Transmission");
-            return transmissionService.cancelTorrent(savedTorrent.hash);
+            return torrentService.cancelTorrentInTransmission(savedTorrent.hash);
         }
 
         if (torrentState === TorrentState.DOWNLOAD_COMPLETED) {
