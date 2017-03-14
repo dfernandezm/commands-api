@@ -3,6 +3,7 @@
  */
 const debug = require("debug")("services:worker");
 const transmissionService = require("./transmissionService");
+const renameService = require("./rename/renameService");
 const workerService = {};
 
 workerService.startDownload = (torrent) => {
@@ -28,9 +29,8 @@ workerService.getStatus = () => {
 }
 
 workerService.startRename = (torrents, mediacenterSettings) => {
-    const filebotService = require("./filebotService");
     debug("MediacenterSettings", mediacenterSettings);
-    return filebotService.renameFromWorker(torrents, mediacenterSettings).catch((err) => {
+    return renameService.renameFromWorker(torrents, mediacenterSettings).catch((err) => {
         debug("Error is ", err);
         throw err;
     });

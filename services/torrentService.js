@@ -11,6 +11,7 @@ var torrentUtilsService = require('./torrentUtilsService');
 var transactionUtilsService = require('./transactionUtilsService');
 var filebotService = require('./filebotService');
 const tvsterMessageService = require("./sqs/tvsterMessageService");
+var settingsService = require('./settingsService');
 
 var torrentService = {};
 
@@ -20,6 +21,9 @@ torrentService.getCurrentStatus = function() {
   lowerMoment.subtract(2, 'weeks');
   var lowerDate = lowerMoment.toDate();
 
+  process.nextTick(()=> {
+      renameCheck();
+  });
   // select t from torrent
   // where (dateStarted is not null and dateStarted between :lower and :upper)
   // or state != 'COMPLETED'
@@ -468,8 +472,8 @@ function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
 const renameCheck = () => {
     log.debug("Running renameCheck... ");
     //TODO: enable when renamer ready
-    // return torrentService.findTorrentsWithState(TorrentState.RENAMING)
-    //     .then(startRenamer);
+    return torrentService.findTorrentsWithState(TorrentState.RENAMING)
+                         .then(startRenamer);
 }
 
 const startRenamer = (renamingTorrents) => {
@@ -478,7 +482,10 @@ const startRenamer = (renamingTorrents) => {
         // Find torrents in DOWNLOAD_COMPLETED state
         return torrentService.findTorrentsWithState(TorrentState.DOWNLOAD_COMPLETED).then((torrents) => {
             if (torrents && torrents.length > 0) {
-                return tvsterMessageService.startRename(torrents);
+                // Cache the settings
+                return settingsService.getDefaultMediacenterSettings().then(settings => {
+                    return tvsterMessageService.startRename(torrents, settings);
+                });
             } else {
                 log.info("[RENAMER] There is no torrents to rename");
                 return null;

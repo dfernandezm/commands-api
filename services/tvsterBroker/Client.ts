@@ -9,7 +9,7 @@ const func = (broker: TvsterBroker) => {
     broker.receive();
 }
 
-let tvsterMessage = new TvsterMessage();
+let tvsterMessage;
 tvsterMessage.messageType = MessageType.CANCEL_DOWNLOAD;
 tvsterMessage.messageContents = JSON.stringify({ id: "XXXXX", status: "COMPLETED", type: MessageType[tvsterMessage.messageType]});
 broker.send(tvsterMessage);

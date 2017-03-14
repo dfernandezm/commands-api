@@ -6,50 +6,52 @@ const sqsService = require("./sqsService");
 const messageTypes = require("./messageTypes");
 const workerService = require("../workerService");
 const TorrentState = require('../torrentState');
+const downloadOperationHandlers = require("./downloadOperationHandlers");
 const Promise = require("bluebird");
 
 const renameOperationHandlers = {};
+
+// API: initiates a startRename
 renameOperationHandlers.startRename = (torrents, mediaCenterSettings) => {
-    let messageToSend = { type: messageTypes.START_RENAME,
-        content: { torrents: torrents, mediacenterSettings: mediaCenterSettings }
-    };
-    return sqsService.sendMessage(messageToSend);
+    let content = { torrents: torrents, mediacenterSettings: mediaCenterSettings };
+    return sendRequestMessage(messageTypes.START_RENAME, content);
 }
 
-// Worker notifies API about renaming completed
-renameOperationHandlers.renameCompleted = (torrentsWithStatus) => {
-    let messageToSend = { type: messageTypes.RENAME_COMPLETED,
-        content: { renamedTorrents: torrentsWithStatus }
-    };
-    return sqsService.sendMessage(messageToSend);
+// Worker: notifies API about renaming completed
+renameOperationHandlers.renameCompleted = (renamedTorrents) => {
+    let content = { renamedTorrents: renamedTorrents};
+    return sendRequestMessage(messageTypes.RENAME_COMPLETED, content);
 }
 
-// Executed on the worker
+// Worker: starts a renaming process (if not already running)
 renameOperationHandlers.handleStartRenameRequest = (messageContent) => {
     // Worker handles the start of the renaming process
     let statusResult;
     return workerService.startRename(messageContent.torrents, messageContent.mediacenterSettings).then((renamingTorrentsHashes) => {
         statusResult = "success";
-        debug(">>>>> Renaming torrent hashes", renamingTorrentsHashes);
-        return sendStartRenameResponse({renamingTorrentsHashes, statusResult});
+        // List of renaming torrents
+        debug("Renaming torrent hashes", renamingTorrentsHashes);
+        let content = {renamingTorrentsHashes: renamingTorrentsHashes};
+        return sendResponse(messageTypes.START_RENAME, content, statusResult);
     }).catch((error) => {
         statusResult = "failure";
         debug("Error starting renamer: ", error);
-        return sendStartRenameResponse({error, statusResult});
+        let content = {error: error};
+        return sendResponse(messageTypes.START_RENAME, content, statusResult);
     });
 }
 
-// The API executes this handler as a response from startRename
+// API: executes this handler as a response from startRename
 renameOperationHandlers.handleStartRenameResponse = (messageContent) => {
     debug("Received response for start rename", messageContent);
     const torrentService = require("../torrentService");
     if (messageContent.result === "success") {
-        let renamingTorrentHashes = messageContent.renamingTorrentHashes;
-        if (renamingTorrentHashes) {
-            return Promise.map(renamingTorrentHashes, (torrentHash) => {
+        let renamingTorrentsHashes = messageContent.renamingTorrentsHashes;
+        if (renamingTorrentsHashes) {
+            return Promise.map(renamingTorrentsHashes, (torrentHash) => {
                 return torrentService.setTorrentAsRenaming(torrentHash);
             }).then((results) => {
-                debug("Updated torrents to renaming state", renamingTorrentHashes)
+                debug("Updated torrents to renaming state", renamingTorrentsHashes)
             }).catch((err) => {
                 debug("There was an error updating torrents", err);
             });
@@ -64,14 +66,16 @@ renameOperationHandlers.handleStartRenameResponse = (messageContent) => {
 }
 
 // The API handles a rename completed message (sets the torrent/s as RENAMING_COMPLETED) or back
-// to DOWNLOAD_COMPLETED (the renamedTorrents collection comes from filebotExecutor)
+// to DOWNLOAD_COMPLETED (the renamedTorrents collection comes from renameExecutor)
 renameOperationHandlers.handleRenameCompleted = (messageContent) => {
     let renamedTorrents = messageContent.renamedTorrents;
     const torrentService = require("../torrentService");
     let torrentState = TorrentState.RENAMING_COMPLETED;
     debug("Renamed torrents are", renamedTorrents);
     return Promise.map(Object.keys(renamedTorrents), (torrentHash) => {
+
         debug("Renamed torrent %s", torrentHash);
+
         let completedRenamesOrErrorForTorrent = renamedTorrents[torrentHash];
         let renamedPaths = [];
         for (let completedRenameOrError of completedRenamesOrErrorForTorrent) {
@@ -82,9 +86,9 @@ renameOperationHandlers.handleRenameCompleted = (messageContent) => {
                 break;
             } else {
                 //TODO: Handle multiple file torrent
+                //TODO: Update renamed paths
                 debug("Torrent %s successfully renamed, setting as RENAMING_COMPLETED", torrentHash);
                 renamedPaths.push(completedRenameOrError.renamedPath);
-                //TODO: Update renamed paths
             }
         }
 
@@ -94,25 +98,21 @@ renameOperationHandlers.handleRenameCompleted = (messageContent) => {
     });
 }
 
-// Worker sends message back as a response to a START_RENAME
-const sendStartRenameResponse = (responseObject) => {
-    let content = {};
-    if (responseObject.statusResult === "success") {
-        content = {
-            renamingTorrentsHashes: responseObject.renamingTorrentsHashes,
-            result: responseObject.statusResult
-        }
-    } else {
-        // Failure
-        content = {
-            error: responseObject.error,
-            result: responseObject.statusResult
-        }
-    }
+// TODO: factor these functions
+const sendRequestMessage = (messageType, messageContent) => {
+    let messageToSend = { type: messageType,
+        content: messageContent
+    };
+    return sqsService.sendMessage(messageToSend);
+}
 
-    // Send a response message from the worker setting it as a response to startRename
-    let messageToSend = { type: messageTypes.RESPONSE,
-        initiator: messageTypes.START_RENAME,
+const sendResponse = (initiatorType, content, statusResult) => {
+    content.result = statusResult;
+
+    // Send a response message from the worker setting its initiator (the message type that generated this response)
+    let messageToSend = {
+        type: messageTypes.RESPONSE,
+        initiator: initiatorType,
         content: content
     };
 

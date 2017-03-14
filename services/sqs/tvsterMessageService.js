@@ -33,6 +33,10 @@ tvsterMessageService.startRename = (torrents, mediaCenterSettings) => {
     return renameOperationHandlers.startRename(torrents, mediaCenterSettings);
 }
 
+tvsterMessageService.renameCompleted = (result) => {
+    return renameOperationHandlers.renameCompleted(result);
+}
+
 const workerMessageReceivedHandler = (rawMessage) => {
     let message = JSON.parse(rawMessage);
     switch (message.type) {
@@ -52,8 +56,7 @@ const workerMessageReceivedHandler = (rawMessage) => {
             downloadOperationHandlers.handleStatusRequest();
             break;
         case messageTypes.START_RENAME:
-            //renameOperationHandlers.handleStartRenameRequest(message.content);
-            return true;
+            renameOperationHandlers.handleStartRenameRequest(message.content);
             break;
         default:
             debug("Message type not recognized: {} -- it will be ignored", message.type);
@@ -66,7 +69,9 @@ const apiMessageReceivedHandler = (rawMessage) => {
         case messageTypes.RESPONSE:
             return handleAllResponseMessages(message);
         case messageTypes.RENAME_COMPLETED:
-            return renameOperationHandlers.handleRenameCompleted(message.content);
+            debug("Rename completed: %o", message);
+            break;
+            //return renameOperationHandlers.handleRenameCompleted(message.content);
         default:
             debug("Message type not recognized: {} -- it will be ignored", message.type);
     }
