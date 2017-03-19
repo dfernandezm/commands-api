@@ -6,7 +6,7 @@ const debug = require("debug")("services:renameService");
 const renameExecutor = require("./renameExecutor");
 const renameService = {};
 
-renameService.renameFromWorker = (torrents, mediacenterSettings) => {
+renameService.renameOrSubtitlesFromWorker = (torrents, mediacenterSettings, isRenamer) => {
     return new Promise((resolve, reject) => {
         let taskGuid = utilService.generateGuid();
         debug("Starting renamer from worker/organizer, GUID: ", taskGuid);
@@ -16,26 +16,42 @@ renameService.renameFromWorker = (torrents, mediacenterSettings) => {
         let processingPath = mediacenterSettings.processingTempPath;
 
         debug("Settings: %o", mediacenterSettings);
-        let inputPaths = generateInputPaths(torrents);
 
-        // Rename script is as follows
-        // ./filebot-rename.sh path1,path2,pathn /mediacenter /path/to/log localhost:8080
-        let renameCommandParameters = {
-            inputPaths: inputPaths,
-            baseLibraryPath: baseLibraryPath,
-            logLocation: processingPath,
-            xbmcHostOrIp: xbmcHostOrIp
-        };
+        let runningProcess;
 
-        let renameProcess = renameExecutor.executeFilebotRenameScript(renameCommandParameters);
+        if (isRenamer) {
+            let inputPaths = generateInputPaths(torrents);
 
-        if (renameProcess.exitCode && renameProcess.exitCode === -1) {
+            // Rename script is as follows
+            // ./filebot-rename.sh path1,path2,pathn /mediacenter /path/to/log localhost:8080
+            let renameCommandParameters = {
+                inputPaths: inputPaths,
+                baseLibraryPath: baseLibraryPath,
+                logLocation: processingPath,
+                xbmcHostOrIp: xbmcHostOrIp
+            };
+
+            runningProcess = renameExecutor.executeFilebotScript(renameCommandParameters,true);
+        } else {
+            // Subtitles script as follows
+            // ./filebot-subs.sh path1,path2,pathn /path/to/log
+            let renamedPaths = getRenamedPaths(torrents);
+            let subtitleFetchingParams = {
+                torrents: torrents,
+                renamedPaths: renamedPaths,
+                logLocation: processingPath
+            }
+
+            runningProcess = renameExecutor.executeFilebotScript(subtitleFetchingParams,false);
+        }
+
+        if (runningProcess.exitCode && runningProcess.exitCode === -1) {
             // It is an error spawning
-            return reject(renameProcess);
+            return reject(runningProcess);
         }
 
         // Start monitoring
-        renameExecutor.startMonitoringRenamer(renameProcess, true);
+        renameExecutor.startMonitoringProcess(runningProcess, torrents, isRenamer);
 
         return resolve(torrents.map(torrent => torrent.hash));
     });
@@ -43,6 +59,12 @@ renameService.renameFromWorker = (torrents, mediacenterSettings) => {
 
 const generateInputPaths = (torrents) => {
     return torrents.map(torrent => torrent.filePath);
+}
+
+const getRenamedPaths = (torrents) => {
+    return torrents.map(torrent => {
+       return torrent.renamedPath.split(";").join(",")
+    })
 }
 
 module.exports = renameService;

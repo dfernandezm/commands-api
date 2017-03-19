@@ -30,7 +30,15 @@ workerService.getStatus = () => {
 
 workerService.startRename = (torrents, mediacenterSettings) => {
     debug("MediacenterSettings", mediacenterSettings);
-    return renameService.renameFromWorker(torrents, mediacenterSettings).catch((err) => {
+    return renameService.renameOrSubtitlesFromWorker(torrents, mediacenterSettings, true).catch((err) => {
+        debug("Error is ", err);
+        throw err;
+    });
+}
+
+workerService.startSubtitles = (torrents, mediacenterSettings) => {
+    debug("MediacenterSettings", mediacenterSettings);
+    return renameService.renameOrSubtitlesFromWorker(torrents, mediacenterSettings, false).catch((err) => {
         debug("Error is ", err);
         throw err;
     });
