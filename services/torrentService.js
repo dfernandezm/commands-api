@@ -502,8 +502,15 @@ const startRenamer = (renamingTorrents) => {
 }
 
 torrentService.setTorrentAsRenaming = (torrentHash) => {
-    return torrentService.findByHash(torrentHash).then(function (torrent) {
+    return torrentService.findByHash(torrentHash).then((torrent) => {
         torrent.state = TorrentState.RENAMING;
+        return torrent.save();
+    });
+}
+
+torrentService.setTorrentAsFetchingSubtitles = (torrentHash) => {
+    return torrentService.findByHash(torrentHash).then((torrent) => {
+        torrent.state = TorrentState.FETCHING_SUBTITLES;
         return torrent.save();
     });
 }
@@ -511,6 +518,5 @@ torrentService.setTorrentAsRenaming = (torrentHash) => {
 function getFilebotService() {
     return require('./filebotService');
 }
-
 
 module.exports = torrentService;

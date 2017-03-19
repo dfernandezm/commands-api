@@ -6,7 +6,8 @@ const sqsService = require("./sqsService");
 const messageTypes = require("./messageTypes");
 const utils = require("../utilService");
 const downloadOperationHandlers =  require("./downloadOperationHandlers");
-const renameOperationHandlers =  require("./renameOperationHandlers");
+const workerOperationHandlers =  require("./workerOperationHandlers");
+const workerOperationTypes = require("./helpers/workerOperationTypes");
 const tvsterMessageService = {};
 
 tvsterMessageService.getStatus = () => {
@@ -30,11 +31,11 @@ tvsterMessageService.cancelDownload = (torrentHash) => {
 }
 
 tvsterMessageService.startRename = (torrents, mediaCenterSettings) => {
-    return renameOperationHandlers.startRename(torrents, mediaCenterSettings);
+    return workerOperationHandlers.startWorkerOperation(torrents, mediaCenterSettings, workerOperationTypes.RENAME);
 }
 
 tvsterMessageService.renameCompleted = (result) => {
-    return renameOperationHandlers.renameCompleted(result);
+    return workerOperationHandlers.workerCompleted(result, workerOperationTypes.RENAME);
 }
 
 const workerMessageReceivedHandler = (rawMessage) => {
@@ -56,7 +57,7 @@ const workerMessageReceivedHandler = (rawMessage) => {
             downloadOperationHandlers.handleStatusRequest();
             break;
         case messageTypes.START_RENAME:
-            renameOperationHandlers.handleStartRenameRequest(message.content);
+            workerOperationHandlers.handleStartWorkerRequest(message.content, workerOperationTypes.RENAME);
             break;
         default:
             debug("Message type not recognized: {} -- it will be ignored", message.type);
@@ -69,7 +70,7 @@ const apiMessageReceivedHandler = (rawMessage) => {
         case messageTypes.RESPONSE:
             return handleAllResponseMessages(message);
         case messageTypes.RENAME_COMPLETED:
-            return renameOperationHandlers.handleRenameCompleted(message.content);
+            return workerOperationHandlers.handleWorkerCompleted(message.content, workerOperationTypes.RENAME);
         default:
             debug("Message type not recognized: {} -- it will be ignored", message.type);
     }
@@ -88,7 +89,7 @@ const handleAllResponseMessages = (message) => {
         case messageTypes.STATUS:
             return downloadOperationHandlers.handleStatusResponse(message.content);
         case messageTypes.START_RENAME:
-            return renameOperationHandlers.handleStartRenameResponse(message.content);
+            return workerOperationHandlers.handleStartWorkerResponse(message.content, workerOperationTypes.RENAME);
         default:
             debug("Message initiator not recognized: {} -- it will be ignored", message.initiator);
             return {};

@@ -1,25 +1,33 @@
 /**
  * Created by david on 13/03/2017.
  */
-
 const spawn = require('child_process').spawn;
 const debug = require("debug")("services/rename:renameExecutor");
-
-
 const renameExecutor = {};
 
 const pathMovedPattern = /\[MOVE\]\s+Rename\s+\[(.*)\]\s+to\s+\[(.*)\]/;
 const hashRegex = /_([\w]{40})/;
 
-renameExecutor.executeFilebotRenameScript = (renameCommandParameters) => {
-    try {
-        let args = [ renameCommandParameters.inputPaths.join(","),
-                     renameCommandParameters.baseLibraryPath,
-                     renameCommandParameters.logLocation,
-                     renameCommandParameters.xbmcHostOrIp
-                     ];
+renameExecutor.executeFilebotScript = (commandParameters, isRenamer) => {
 
-        let executablePath = __dirname + "/filebot-rename.sh";
+    try {
+
+        let args;
+        let executablePath;
+
+        if (isRenamer) {
+            args = [ commandParameters.inputPaths.join(","),
+                commandParameters.baseLibraryPath,
+                commandParameters.logLocation,
+                commandParameters.xbmcHostOrIp
+            ];
+            executablePath = __dirname + "/filebot-rename.sh";
+        } else { // Is subtitles
+            args = [ commandParameters.renamedPaths,
+                commandParameters.logLocation
+            ];
+            executablePath = __dirname + "/filebot-subtitles.sh";
+        }
 
         debug("Executable is", executablePath);
         debug("Arguments for script are %o", args);
@@ -34,7 +42,7 @@ renameExecutor.executeFilebotRenameScript = (renameCommandParameters) => {
     }
 }
 
-renameExecutor.startMonitoringRenamer = (filebotProcess, isRenamer) => {
+renameExecutor.startMonitoringProcess = (filebotProcess, isRenamer) => {
     // Give the chance to run other tasks by deferring process listeners
     process.nextTick(() => {
 
