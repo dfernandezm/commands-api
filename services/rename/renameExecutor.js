@@ -5,7 +5,9 @@ const spawn = require('child_process').spawn;
 
 const debug = require("debug")("services/rename:renameExecutor");
 const Promise = require("bluebird");
-const fs = Promise.promisifyAll(require("fs"));
+
+//TODO: does not seem to promifisy properly...
+var fs = Promise.promisifyAll(require("fs"));
 const path = require("path");
 const renameExecutor = {};
 
@@ -44,6 +46,14 @@ renameExecutor.executeFilebotScript = (commandParameters, isRenamer) => {
         debug("Error spawning script", err);
         return {exitCode: -1, error: err};
     }
+}
+
+const buildTorrentsMap = (torrents, error) => {
+    let torrentsMap = {};
+    torrents.map(torrent => {
+        torrentsMap[torrent.hash] = error;
+    });
+    return torrentsMap;
 }
 
 renameExecutor.startMonitoringProcess = (filebotProcess, torrents, isRenamer) => {
@@ -114,66 +124,23 @@ renameExecutor.startMonitoringProcess = (filebotProcess, torrents, isRenamer) =>
                 }
                 debug("========Sent rename completed========");
             } else {
-                debug("Completed subtitles %o", completedRenames);
+                debug("Completed subtitles %o", torrentsToFetchSubs);
                 if (exitCode !== 0) {
                     tvsterMessageService.subtitlesCompleted({status: "failure", error: lastError});
                 } else {
-                    let validationResults = validateSubtitledTorrents(torrentsToFetchSubs);
-                    tvsterMessageService.subtitlesCompleted({status: "success", subtitlesResult: validationResults});
+                    validateSubtitledTorrents(torrentsToFetchSubs).then(validationResults => {
+                        debug("Validation results %s", JSON.stringify(validationResults));
+                        tvsterMessageService.subtitlesCompleted({status: "success", subtitlesResult: validationResults});
+                        debug("====== Send subtitles completed ======");
+                    }).catch(err => {
+                        debug("Error occurred %o", err);
+                        let torrentsMap = buildTorrentsMap(torrentsToFetchSubs, err);
+                        tvsterMessageService.subtitlesCompleted({status: "failure", subtitlesResult: torrentsMap});
+                    }) ;
                 }
-                debug("========Sent subtitles completed========");
             }
         });
     });
-}
-
-const validateTorrentsWithSubtitles = (torrents) => {
-    let validationResults = {};
-    torrents.forEach((torrent) => {
-        let renamedPath = torrent.renamedPath;
-        let renamedPaths = renamedPath.split(";");
-        let promises = [];
-        renamedPaths.forEach((singlePath, index, array) => {
-            let baseDir = path.dirname(singlePath);
-            let extension = path.extname(singlePath);
-            let fileWithoutExtension = path.basename(renamedPath, extension);
-            debug("Checking subtitles for file:%s", fileWithoutExtension);
-
-            let spaFile = baseDir + "/" + fileWithoutExtension + ".spa.srt";
-            let esFile = baseDir + "/" + fileWithoutExtension + ".es.srt";
-            let engFile = baseDir + "/" + fileWithoutExtension + ".eng.srt";
-            let enFile = baseDir + "/" + fileWithoutExtension + ".en.srt";
-
-            promises.push(Promise.all(fs.exists(spaFile),fs.exists(esFile),fs.exists(engFile),fs.exists(enFile), (results) => {
-                let spaFileExists = results[0];
-                let esFileExists = results[1];
-                let engFileExists = results[2];
-                let enFileExists = results[3];
-                let subtitleForPath = true;
-
-                if (!spaFileExists && !esFileExists) {
-                    debug("Missing Spanish subtitles for %s", singlePath);
-                    subtitleForPath = false;
-                } else {
-                    debug("Spanish subtitles found for %s", singlePath);
-                }
-
-                if (!engFileExists && !enFileExists) {
-                    debug("Missing English subtitles for %s", singlePath);
-                    subtitleForPath = false;
-                } else {
-                    debug("Spanish subtitles found for %s", singlePath);
-                }
-
-                return {singlePath, subtitleForPath};
-            }));
-
-            return Promise.all(promises).then(results => {
-                validationResults[torrent.hash] = results;
-            });
-        });
-    });
-    return validationResults;
 }
 
 const validateSubtitledTorrents = (torrents) => {
@@ -183,34 +150,14 @@ const validateSubtitledTorrents = (torrents) => {
            validationResults[torrent.hash] = allPathsResults;
        });
     }).then(() => {
-        debug("Finished validation %o", validationResults);
+        debug("Finished validation %s", JSON.stringify(validationResults));
         return validationResults;
     });
 }
 
-const validateSingleTorrent = (validationResults, torrent) => {
-    let renamedPath = torrent.renamedPath;
-    let renamedPaths = renamedPath.split(";");
-    return Promise.map(renamedPaths, (renamedPath) => {
-       return validateSinglePath(renamedPath);
-    }).then(allPathsResults => {
-        return allPathsResults;
-    });
-}
-
-const validateSinglePath = (singlePath) => {
-    let baseDir = path.dirname(singlePath);
-    let extension = path.extname(singlePath);
-    let fileWithoutExtension = path.basename(renamedPath, extension);
-    debug("Checking subtitles for file:%s", fileWithoutExtension);
-
-    let spaFile = baseDir + "/" + fileWithoutExtension + ".spa.srt";
-    let esFile = baseDir + "/" + fileWithoutExtension + ".es.srt";
-    let engFile = baseDir + "/" + fileWithoutExtension + ".eng.srt";
-    let enFile = baseDir + "/" + fileWithoutExtension + ".en.srt";
-    let filesToCheck = [fs.exists(spaFile),fs.exists(esFile),fs.exists(engFile),fs.exists(enFile)];
-
-    return Promise.all(filesToCheck, (results) => {
+const checkFilesInPath = (filesToCheck, singlePath) => {
+    return Promise.all(filesToCheck).then((results) => {
+        debug("Results to check for subtitles %s", JSON.stringify(results));
         let spaFileExists = results[0];
         let esFileExists = results[1];
         let engFileExists = results[2];
@@ -228,12 +175,54 @@ const validateSinglePath = (singlePath) => {
             debug("Missing English subtitles for %s", singlePath);
             subtitleForPath = false;
         } else {
-            debug("Spanish subtitles found for %s", singlePath);
+            debug("English subtitles found for %s", singlePath);
         }
 
         return {singlePath, subtitleForPath};
     });
 }
 
+const validateSinglePath = (singlePath) => {
+    return Promise.resolve().then(() => {
+        let baseDir = path.dirname(singlePath);
+        let extension = path.extname(singlePath);
+        let fileWithoutExtension = path.basename(singlePath, extension);
+        debug("Checking subtitles for file: %s", fileWithoutExtension);
+
+        let spaFile = baseDir + "/" + fileWithoutExtension + ".spa.srt";
+        let esFile = baseDir + "/" + fileWithoutExtension + ".es.srt";
+        let engFile = baseDir + "/" + fileWithoutExtension + ".eng.srt";
+        let enFile = baseDir + "/" + fileWithoutExtension + ".en.srt";
+
+        let filesToCheckPromises = [existsFile(spaFile),existsFile(esFile),existsFile(engFile),existsFile(enFile)];
+        return checkFilesInPath(filesToCheckPromises, singlePath);
+    });
+}
+
+const validateSingleTorrent = (torrent) => {
+    let renamedPath = torrent.renamedPath;
+    let renamedPaths = renamedPath.split(";");
+    debug("Validating torrent with paths %s", JSON.stringify(renamedPaths));
+    return Promise.map(renamedPaths, (renamedPath) => {
+       return validateSinglePath(renamedPath);
+    }).then(allPathsResults => {
+        // Flatten
+        debug("Subtitles paths for torrent %s => %s", torrent.hash, JSON.stringify(allPathsResults));
+        return allPathsResults.reduce((acc, item) => {
+            return acc.concat(item);
+        }, []);
+    });
+}
+
+const existsFile = (file) => {
+    return new Promise((resolve, reject) => {
+        return fs.stat(file, (err) => {
+            if (err) {
+                return reject(false);
+            }
+            return resolve(true);
+        });
+    });
+}
 
 module.exports = renameExecutor;

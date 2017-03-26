@@ -509,7 +509,7 @@ const startSubtitlesIfNotInProgress = (subtitlingTorrents) => {
     if (!subtitlingTorrents || subtitlingTorrents.length == 0) {
         return torrentService.findTorrentsWithState(TorrentState.RENAMING_COMPLETED).then(startFetchingSubtitles);
     } else {
-        log.warn("Torrents are already renaming", subtitlingTorrents);
+        log.warn("Torrents are already in progress for subtitle fetching", subtitlingTorrents);
     }
 }
 
