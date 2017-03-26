@@ -492,8 +492,8 @@ const startRenamer = (renamingTorrents) => {
                     return tvsterMessageService.startRename(torrents, settings);
                 });
             } else {
-                log.info("[RENAMER] There is no torrents to rename");
-                return null;
+                log.info("[RENAMER] There is no torrents to rename, checking subtitles");
+                return torrentService.checkStartSubtitles();
             }
         });
     } else {
@@ -501,6 +501,28 @@ const startRenamer = (renamingTorrents) => {
     }
 }
 
+torrentService.checkStartSubtitles = () => {
+    return torrentService.findTorrentsWithState(TorrentState.FETCHING_SUBTITLES).then(startSubtitlesIfNotInProgress);
+}
+
+const startSubtitlesIfNotInProgress = (subtitlingTorrents) => {
+    if (!subtitlingTorrents || subtitlingTorrents.length == 0) {
+        return torrentService.findTorrentsWithState(TorrentState.RENAMING_COMPLETED).then(startFetchingSubtitles);
+    } else {
+        log.warn("Torrents are already renaming", subtitlingTorrents);
+    }
+}
+
+const startFetchingSubtitles = (torrents) => {
+    if (torrents && torrents.length > 0) {
+        //TODO: Cache the settings
+        return settingsService.getDefaultMediacenterSettings().then(settings => {
+            return tvsterMessageService.startSubtitles(torrents, settings);
+        });
+    } else {
+        log.info("There is not torrents to fetch subtitles for");
+    }
+}
 torrentService.setTorrentAsRenaming = (torrentHash) => {
     return torrentService.findByHash(torrentHash).then((torrent) => {
         torrent.state = TorrentState.RENAMING;

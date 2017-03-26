@@ -2,7 +2,11 @@
  * Created by david on 13/03/2017.
  */
 const spawn = require('child_process').spawn;
+
 const debug = require("debug")("services/rename:renameExecutor");
+const Promise = require("bluebird");
+const fs = Promise.promisifyAll(require("fs"));
+const path = require("path");
 const renameExecutor = {};
 
 const pathMovedPattern = /\[MOVE\]\s+Rename\s+\[(.*)\]\s+to\s+\[(.*)\]/;
@@ -42,11 +46,16 @@ renameExecutor.executeFilebotScript = (commandParameters, isRenamer) => {
     }
 }
 
-renameExecutor.startMonitoringProcess = (filebotProcess, isRenamer) => {
+renameExecutor.startMonitoringProcess = (filebotProcess, torrents, isRenamer) => {
     // Give the chance to run other tasks by deferring process listeners
     process.nextTick(() => {
 
         let completedRenames = {};
+        let torrentsToFetchSubs;
+        if (!isRenamer) {
+            torrentsToFetchSubs = torrents;
+        }
+        let lastError;
 
         filebotProcess.stdout.on('data', function (data) {
             const dataStr = data.toString('utf8');
@@ -83,16 +92,17 @@ renameExecutor.startMonitoringProcess = (filebotProcess, isRenamer) => {
                     }
                 }
             } else {
-                //TODO: if subtitles
+                // Subtitles, do something?
             }
         });
 
         filebotProcess.stderr.on('data', function (data) {
-            debug('[FILEBOT-COMMAND-ERROR]: ' + data);
+            lastError = data;
+            debug('[FILEBOT-COMMAND-ERROR]: ' + lastError);
+
         });
 
         filebotProcess.on('close',  (exitCode) => {
-            //TODO: send exitcode
             debug("Filebot Process exited with code: %s",exitCode);
             const tvsterMessageService = require("../sqs/tvsterMessageService");
             if (isRenamer) {
@@ -104,10 +114,126 @@ renameExecutor.startMonitoringProcess = (filebotProcess, isRenamer) => {
                 }
                 debug("========Sent rename completed========");
             } else {
-                //TODO: is subtitles
+                debug("Completed subtitles %o", completedRenames);
+                if (exitCode !== 0) {
+                    tvsterMessageService.subtitlesCompleted({status: "failure", error: lastError});
+                } else {
+                    let validationResults = validateSubtitledTorrents(torrentsToFetchSubs);
+                    tvsterMessageService.subtitlesCompleted({status: "success", subtitlesResult: validationResults});
+                }
+                debug("========Sent subtitles completed========");
             }
         });
     });
 }
+
+const validateTorrentsWithSubtitles = (torrents) => {
+    let validationResults = {};
+    torrents.forEach((torrent) => {
+        let renamedPath = torrent.renamedPath;
+        let renamedPaths = renamedPath.split(";");
+        let promises = [];
+        renamedPaths.forEach((singlePath, index, array) => {
+            let baseDir = path.dirname(singlePath);
+            let extension = path.extname(singlePath);
+            let fileWithoutExtension = path.basename(renamedPath, extension);
+            debug("Checking subtitles for file:%s", fileWithoutExtension);
+
+            let spaFile = baseDir + "/" + fileWithoutExtension + ".spa.srt";
+            let esFile = baseDir + "/" + fileWithoutExtension + ".es.srt";
+            let engFile = baseDir + "/" + fileWithoutExtension + ".eng.srt";
+            let enFile = baseDir + "/" + fileWithoutExtension + ".en.srt";
+
+            promises.push(Promise.all(fs.exists(spaFile),fs.exists(esFile),fs.exists(engFile),fs.exists(enFile), (results) => {
+                let spaFileExists = results[0];
+                let esFileExists = results[1];
+                let engFileExists = results[2];
+                let enFileExists = results[3];
+                let subtitleForPath = true;
+
+                if (!spaFileExists && !esFileExists) {
+                    debug("Missing Spanish subtitles for %s", singlePath);
+                    subtitleForPath = false;
+                } else {
+                    debug("Spanish subtitles found for %s", singlePath);
+                }
+
+                if (!engFileExists && !enFileExists) {
+                    debug("Missing English subtitles for %s", singlePath);
+                    subtitleForPath = false;
+                } else {
+                    debug("Spanish subtitles found for %s", singlePath);
+                }
+
+                return {singlePath, subtitleForPath};
+            }));
+
+            return Promise.all(promises).then(results => {
+                validationResults[torrent.hash] = results;
+            });
+        });
+    });
+    return validationResults;
+}
+
+const validateSubtitledTorrents = (torrents) => {
+    let validationResults = {};
+    return Promise.map(torrents, (torrent) => {
+       return validateSingleTorrent(torrent).then((allPathsResults) => {
+           validationResults[torrent.hash] = allPathsResults;
+       });
+    }).then(() => {
+        debug("Finished validation %o", validationResults);
+        return validationResults;
+    });
+}
+
+const validateSingleTorrent = (validationResults, torrent) => {
+    let renamedPath = torrent.renamedPath;
+    let renamedPaths = renamedPath.split(";");
+    return Promise.map(renamedPaths, (renamedPath) => {
+       return validateSinglePath(renamedPath);
+    }).then(allPathsResults => {
+        return allPathsResults;
+    });
+}
+
+const validateSinglePath = (singlePath) => {
+    let baseDir = path.dirname(singlePath);
+    let extension = path.extname(singlePath);
+    let fileWithoutExtension = path.basename(renamedPath, extension);
+    debug("Checking subtitles for file:%s", fileWithoutExtension);
+
+    let spaFile = baseDir + "/" + fileWithoutExtension + ".spa.srt";
+    let esFile = baseDir + "/" + fileWithoutExtension + ".es.srt";
+    let engFile = baseDir + "/" + fileWithoutExtension + ".eng.srt";
+    let enFile = baseDir + "/" + fileWithoutExtension + ".en.srt";
+    let filesToCheck = [fs.exists(spaFile),fs.exists(esFile),fs.exists(engFile),fs.exists(enFile)];
+
+    return Promise.all(filesToCheck, (results) => {
+        let spaFileExists = results[0];
+        let esFileExists = results[1];
+        let engFileExists = results[2];
+        let enFileExists = results[3];
+        let subtitleForPath = true;
+
+        if (!spaFileExists && !esFileExists) {
+            debug("Missing Spanish subtitles for %s", singlePath);
+            subtitleForPath = false;
+        } else {
+            debug("Spanish subtitles found for %s", singlePath);
+        }
+
+        if (!engFileExists && !enFileExists) {
+            debug("Missing English subtitles for %s", singlePath);
+            subtitleForPath = false;
+        } else {
+            debug("Spanish subtitles found for %s", singlePath);
+        }
+
+        return {singlePath, subtitleForPath};
+    });
+}
+
 
 module.exports = renameExecutor;

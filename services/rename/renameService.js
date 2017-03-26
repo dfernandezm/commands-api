@@ -37,6 +37,7 @@ renameService.renameOrSubtitlesFromWorker = (torrents, mediacenterSettings, isRe
             // ./filebot-subs.sh path1,path2,pathn /path/to/log
             let renamedPaths = getRenamedPaths(torrents);
             let subtitleFetchingParams = {
+                torrents: torrents,
                 renamedPaths: renamedPaths,
                 logLocation: processingPath
             }
@@ -50,7 +51,7 @@ renameService.renameOrSubtitlesFromWorker = (torrents, mediacenterSettings, isRe
         }
 
         // Start monitoring
-        renameExecutor.startMonitoringProcess(runningProcess, isRenamer);
+        renameExecutor.startMonitoringProcess(runningProcess, torrents, isRenamer);
 
         return resolve(torrents.map(torrent => torrent.hash));
     });

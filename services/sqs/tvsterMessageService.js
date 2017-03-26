@@ -34,8 +34,16 @@ tvsterMessageService.startRename = (torrents, mediaCenterSettings) => {
     return workerOperationHandlers.startWorkerOperation(torrents, mediaCenterSettings, workerOperationTypes.RENAME);
 }
 
+tvsterMessageService.startSubtitles = (torrents, mediaCenterSettings) => {
+    return workerOperationHandlers.startWorkerOperation(torrents, mediaCenterSettings, workerOperationTypes.SUBTITLES);
+}
+
 tvsterMessageService.renameCompleted = (result) => {
     return workerOperationHandlers.workerCompleted(result, workerOperationTypes.RENAME);
+}
+
+tvsterMessageService.subtitlesCompleted = (result) => {
+    return workerOperationHandlers.workerCompleted(result, workerOperationTypes.SUBTITLES);
 }
 
 const workerMessageReceivedHandler = (rawMessage) => {
@@ -58,6 +66,9 @@ const workerMessageReceivedHandler = (rawMessage) => {
             break;
         case messageTypes.START_RENAME:
             workerOperationHandlers.handleStartWorkerRequest(message.content, workerOperationTypes.RENAME);
+            break;
+        case messageTypes.START_SUBTITLES:
+            workerOperationHandlers.handleStartWorkerRequest(message.content, workerOperationTypes.SUBTITLES);
             break;
         default:
             debug("Message type not recognized: {} -- it will be ignored", message.type);
@@ -90,6 +101,8 @@ const handleAllResponseMessages = (message) => {
             return downloadOperationHandlers.handleStatusResponse(message.content);
         case messageTypes.START_RENAME:
             return workerOperationHandlers.handleStartWorkerResponse(message.content, workerOperationTypes.RENAME);
+        case messageTypes.START_SUBTITLES:
+            return workerOperationHandlers.handleStartWorkerResponse(message.content, workerOperationTypes.SUBTITLES);
         default:
             debug("Message initiator not recognized: {} -- it will be ignored", message.initiator);
             return {};

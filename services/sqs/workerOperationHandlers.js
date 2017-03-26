@@ -136,8 +136,11 @@ workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperation
                     let separatedRenamedPaths = renamedPaths.join(";");
                     debug("Torrent %s successfully renamed, setting as RENAMING_COMPLETED, renamed paths are %s", torrentHash, separatedRenamedPaths);
                     torrent.renamedPath = separatedRenamedPaths;
+                } else {
+                    // nothing to return when doing subtitles
+                    debug("Torrent %s got subtitles, setting as COMPLETED", torrentHash);
                 }
-                // nothing to return when doing subtitles
+
             }
 
             torrentService.updateTorrentUsingHash(torrent).then(() => {

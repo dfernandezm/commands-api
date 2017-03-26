@@ -46,8 +46,9 @@ do
     eval $COPY_BACK_CMD
 
     echo "Deleting temporary subs $RM_COPIED_CMD"
+    set +e
     eval $RM_COPIED_CMD
-
+    set -e
   done
 
 done
