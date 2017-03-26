@@ -7,7 +7,6 @@ var settingsService = require('./settingsService');
 var _ = require('lodash');
 var Promise = require('bluebird');
 var utilService = require('./utilService');
-var jobService = require('./jobService');
 var TorrentState = require('./torrentState');
 var torrentService = require('./torrentService');
 var filebotExecutor = require('./filebotCommand/filebotExecutor');
@@ -167,21 +166,6 @@ filebotService.prepareRename = function (torrentList) {
         throw err;
     });
 };
-
-//Deprecated -- for DB access, but even with that is not needed
-filebotService.startRenamerJob = function (renameTasks, jobGuid) {
-    log.debug("Creating job with GUID: ", jobGuid);
-    return jobService.createJob({guid: jobGuid, state: 'PROCESSING', jobType: 'RENAME'})
-        .then(function (job) {
-            log.info("Renamer job started with GUID: ", jobGuid);
-            process.nextTick(function () {
-                log.debug(" ====== FILEBOT EXECUTOR ===== ");
-                log.debug("Rename specs ---> :", renameTasks);
-                filebotExecutor.executeRenameTasks(renameTasks);
-            });
-            return job;
-        });
-}
 
 filebotService.rename = function (torrentList) {
     return filebotService.prepareRename(torrentList).then(function (job) {

@@ -4,6 +4,9 @@
 const utilService = require('../utilService');
 const debug = require("debug")("services:renameService");
 const renameExecutor = require("./renameExecutor");
+const path = require("path");
+const _ = require("lodash");
+const UNSORTED_PATH = "Unsorted";
 const renameService = {};
 
 renameService.renameOrSubtitlesFromWorker = (torrents, mediacenterSettings, isRenamer) => {
@@ -14,13 +17,13 @@ renameService.renameOrSubtitlesFromWorker = (torrents, mediacenterSettings, isRe
         let baseLibraryPath = mediacenterSettings.baseLibraryPath;
         let xbmcHostOrIp = mediacenterSettings.xbmcHostOrIp;
         let processingPath = mediacenterSettings.processingTempPath;
-
         debug("Settings: %o", mediacenterSettings);
 
         let runningProcess;
 
         if (isRenamer) {
             let inputPaths = generateInputPaths(torrents);
+            inputPaths.push(baseLibraryPath + "/" + UNSORTED_PATH);
 
             // Rename script is as follows
             // ./filebot-rename.sh path1,path2,pathn /mediacenter /path/to/log localhost:8080
@@ -35,7 +38,7 @@ renameService.renameOrSubtitlesFromWorker = (torrents, mediacenterSettings, isRe
         } else {
             // Subtitles script as follows
             // ./filebot-subs.sh path1,path2,pathn /path/to/log
-            let renamedPaths = getRenamedPaths(torrents);
+            let renamedPaths = getPathsToFetchSubtitlesIn(torrents);
             let subtitleFetchingParams = {
                 torrents: torrents,
                 renamedPaths: renamedPaths,
@@ -61,10 +64,19 @@ const generateInputPaths = (torrents) => {
     return torrents.map(torrent => torrent.filePath);
 }
 
-const getRenamedPaths = (torrents) => {
-    return torrents.map(torrent => {
-       return torrent.renamedPath.split(";").join(",")
-    })
+const getPathsToFetchSubtitlesIn = (torrents) => {
+    // Get folders to fetch subs in
+    let allPaths = torrents.map(torrent => {
+       return torrent.renamedPath.split(";").map(singleRenamedPath => {
+           return path.dirname(singleRenamedPath);
+       });
+    });
+
+    // Flatten to single array of paths
+    allPaths = _.flattenDeep(allPaths);
+
+    // Return the unique paths (as multiple file torrents will probably be in the same folder)
+    return _.uniqBy(allPaths);
 }
 
 module.exports = renameService;

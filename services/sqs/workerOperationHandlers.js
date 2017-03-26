@@ -13,9 +13,11 @@ const Promise = require("bluebird");
 
 const workerOperationHandlers = {};
 
-// API: initiates a startRename
+/**
+ * API: initiates a startRename, startSubtitles
+ */
 workerOperationHandlers.startWorkerOperation = (torrents, mediaCenterSettings, workerOperationType) => {
-    let content = { torrents: torrents, mediacenterSettings: mediaCenterSettings };
+    let content = {torrents: torrents, mediacenterSettings: mediaCenterSettings};
     let messageType = messageTypes.START_RENAME;
 
     if (workerOperationType === workerOperationTypes.SUBTITLES) {
@@ -26,13 +28,18 @@ workerOperationHandlers.startWorkerOperation = (torrents, mediaCenterSettings, w
 }
 
 // Worker: notifies API about renaming completed
-workerOperationHandlers.workerCompleted = (torrents, workerOperationType) => {
-    let content = { renamedTorrents: torrents};
-    let messageType = messageTypes.RENAME_COMPLETED;
+workerOperationHandlers.workerCompleted = (result, workerOperationType) => {
+    let content;
+    let messageType;
+
+    if (workerOperationType === workerOperationTypes.RENAME) {
+        content = {renamedTorrents: result};
+        messageType = messageTypes.RENAME_COMPLETED;
+    }
 
     if (workerOperationType === workerOperationTypes.SUBTITLES) {
+        content = {subtitlesResult: result};
         messageType = messageTypes.SUBTITLES_COMPLETED;
-        content = {fetchedSubtitlesTorrents: torrents};
     }
 
     return messageHandlerHelpers.sendRequestMessage(messageType, content);
@@ -52,7 +59,7 @@ workerOperationHandlers.handleStartWorkerRequest = (messageContent, workerOperat
     let statusResult;
     return workerOperation(messageContent.torrents, messageContent.mediacenterSettings).then((torrentsHashes) => {
         statusResult = "success";
-        let content =  {renamingTorrentsHashes: torrentsHashes};
+        let content = {renamingTorrentsHashes: torrentsHashes};
         if (workerOperationType === workerOperationTypes.RENAME) {
             // List of renaming torrents
             debug("Renaming torrent hashes", torrentsHashes);
@@ -100,55 +107,82 @@ workerOperationHandlers.handleStartWorkerResponse = (messageContent, workerOpera
     }
 }
 
+const handleUpdatedTorrentsInApi = (torrent, workerOperationType, torrentService) => {
+    return () => {
+        if (torrent.state === TorrentState.RENAMING_COMPLETED && workerOperationType === workerOperationTypes.RENAME) {
+            debug("Clearing RENAMING_COMPLETED torrent %s from tranmission");
+            torrentService.cancelTorrentInTransmission(torrentHash);
+        }
+
+        if (torrent.state === TorrentState.RENAMING_COMPLETED && workerOperationType === workerOperationTypes.SUBTITLES ||
+            torrent.state === TorrentState.DOWNLOAD_COMPLETED && workerOperationType === workerOperationTypes.RENAME) {
+            // Subtitles are missing or incomplete or rename failed, to avoid continuous retry we cancel the poller
+            torrentService.stopRenameAndSubtitlesInterval();
+        }
+    }
+}
+
 // The API handles a rename/subtitles completed message (sets the torrent/s as RENAMING_COMPLETED/COMPLETED) or back
 // to DOWNLOAD_COMPLETED/RENAMING_COMPLETED (the collection comes from renameExecutor)
 workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperationType) => {
 
-    debug("Renamed torrents raw message %s", JSON.stringify(messageContent));
+    debug("Renamed/Subtitled torrents raw message %s", JSON.stringify(messageContent));
     const torrentService = require("../torrentService");
 
-    let torrents = messageContent.renamedTorrents.renamedTorrents;
-    let status = messageContent.renamedTorrents.status;
-    let targetState = TorrentState.RENAMING_COMPLETED;
-    let fallbackState = TorrentState.DOWNLOAD_COMPLETED;
+    let torrents;
+    let status;
+    let targetState;
+    let fallbackState;
+
+    if (workerOperationType === workerOperationTypes.RENAME) {
+        torrents = messageContent.renamedTorrents.renamedTorrents;
+        status = messageContent.renamedTorrents.status;
+        targetState = TorrentState.RENAMING_COMPLETED;
+        fallbackState = TorrentState.DOWNLOAD_COMPLETED;
+    }
 
     if (workerOperationType === workerOperationTypes.SUBTITLES) {
-        torrents = messageContent.renamedTorrents.renamedTorrents;
-        status = messageContent.fetchedSubtitlesTorrents.status;
+        torrents = messageContent.subtitlesResult.subtitlesResult;
+        status = messageContent.subtitlesResult.status;
         targetState = TorrentState.COMPLETED;
         fallbackState = TorrentState.RENAMING_COMPLETED;
     }
 
     for (let torrentHash in torrents) {
-        if (torrents.hasOwnProperty(torrentHash)) {
-            let torrentRenames = torrents[torrentHash];
+        if (torrents.hasOwnProperty(torrentHash)) { // As we are iterating over object properties which include generic ones
             let torrent = {};
-
-            if (status === "failure") {
+            debug("Torrent hash %s", torrentHash);
+            if (status && status === "failure") {
                 torrent.hash = torrentHash;
                 torrent.state = fallbackState;
+                debug("Failure detected fetching subtitles, it will retry, error %s", JSON.stringify(messageContent));
             } else {
-                debug("Torrent hash %s", torrentHash);
                 torrent.hash = torrentHash;
                 torrent.state = targetState;
                 if (workerOperationType === workerOperationTypes.RENAME) {
+                    let torrentRenames = torrents[torrentHash];
                     let renamedPaths = torrentRenames.map(rename => rename.renamedPath);
                     let separatedRenamedPaths = renamedPaths.join(";");
                     debug("Torrent %s successfully renamed, setting as RENAMING_COMPLETED, renamed paths are %s", torrentHash, separatedRenamedPaths);
                     torrent.renamedPath = separatedRenamedPaths;
                 } else {
-                    // nothing to return when doing subtitles
-                    debug("Torrent %s got subtitles, setting as COMPLETED", torrentHash);
-                }
+                    let subtitledPaths = torrents[torrentHash];
 
+                    let areAllSubtitled = subtitledPaths.reduce((acc, item) => {
+                        debug("Subtitled path %s - %s", item.singlePath, item.subtitleForPath);
+                        return acc && item.subtitleForPath;
+                    }, true);
+
+                    if (!areAllSubtitled) {
+                        debug("There are some paths with missing subtitles, setting back as RENAMING_COMPLETED");
+                        torrent.state = fallbackState;
+                    } else {
+                        debug("Torrent %s got subtitles, setting as COMPLETED", torrentHash);
+                    }
+                }
             }
 
-            torrentService.updateTorrentUsingHash(torrent).then(() => {
-                if (torrent.state === TorrentState.RENAMING_COMPLETED && workerOperationType === workerOperationTypes.RENAME) {
-                    debug("Clearing RENAMING_COMPLETED torrent %s from tranmission");
-                    return torrentService.cancelTorrentInTransmission(torrentHash);
-                }
-            });
+            torrentService.updateTorrentUsingHash(torrent).then(handleUpdatedTorrentsInApi(torrent, workerOperationType, torrentService));
         }
     }
 }

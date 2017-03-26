@@ -2,7 +2,6 @@
 
 var shellService = require('../shellService');
 var fs = require('fs');
-var log = require('../fb-logger');
 var _ = require('lodash');
 var FILEBOT_SCRIPTS_PATH = __dirname + "/scripts";
 var spawn = require('child_process').spawn;

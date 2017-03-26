@@ -2,6 +2,7 @@
  * Created by david on 11/03/2017.
  */
 const debug = require("debug")("services/sqs:downloadOperationHandlers");
+const log = require("../logger");
 const sqsService = require("./sqsService");
 const messageTypes = require("./messageTypes");
 const workerService = require("../workerService");

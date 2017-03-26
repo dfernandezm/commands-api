@@ -82,6 +82,8 @@ const apiMessageReceivedHandler = (rawMessage) => {
             return handleAllResponseMessages(message);
         case messageTypes.RENAME_COMPLETED:
             return workerOperationHandlers.handleWorkerCompleted(message.content, workerOperationTypes.RENAME);
+        case messageTypes.SUBTITLES_COMPLETED:
+            return workerOperationHandlers.handleWorkerCompleted(message.content, workerOperationTypes.SUBTITLES);
         default:
             debug("Message type not recognized: {} -- it will be ignored", message.type);
     }

@@ -4,7 +4,7 @@ var crawlerService = require('../services/crawlers/crawlerService');
 // For all routes
 router.use(function(req, res, next) {
     // do logging
-    console.log('Invoking routes');
+    console.log("Invoking routes", req.url);
     next(); // make sure we go to the next routes and don't stop here
 });
 

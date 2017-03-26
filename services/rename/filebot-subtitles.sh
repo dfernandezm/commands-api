@@ -6,7 +6,7 @@ LOG_PATH=$2
 
 # Store inside filebot directory in prefs.properties the username / password for OpenSubtitles - 200 subs a day by default
 FB_EXEC=filebot
-LOG_LOCATION=f$LOG_PATH/filebot-subs-$$.log
+LOG_LOCATION=$LOG_PATH/filebot-subs-$$.log
 SUBS_LANG="es-spa","en-eng"
 IFS=","
 
@@ -21,6 +21,7 @@ do
   INPUT_PATH="${INPUT_ARRAY[$i]}"
   for LNG in $SUBS_LANG
   do
+    echo "Fetching subtitles for language $LNG"
     TWO_CODE_LANG=$( echo "$LNG" | awk -F '-' '{print $1}')
     THREE_CODE_LANG=$( echo "$LNG" | awk -F '-' '{print $2}')
 

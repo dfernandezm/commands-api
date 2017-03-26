@@ -1,3 +1,6 @@
+/**
+ * Created by david on 02/04/2017.
+ */
 const log4js = require("log4js");
 log4js.configure({
     "appenders": [
@@ -7,8 +10,7 @@ log4js.configure({
             "filename": "/mediacenter/temp/tvster.log",
             "maxLogSize": 4096,
             "backups": 3,
-            "pollInterval": 15,
-            "category": "tvster_api"
+            "pollInterval": 15
         },
 
         {
@@ -25,4 +27,4 @@ log4js.configure({
         "tvster_api": "DEBUG"
     }
 });
-module.exports = log4js.getLogger("tvster_api");
+ module.exports = log4js.getLogger("tvster_api");
