@@ -1,5 +1,10 @@
 "use strict";
-var log = require('./logger');
+
+const log4js = require("log4js");
+log4js.configure("./log4js-config.json", { reloadSecs: 30 });
+const logger = log4js.getLogger();
+
+const debug = require("debug")("services:torrentService");
 var transmissionService = require('./transmissionService');
 var utilService = require('./utilService');
 var Torrent = require('../models').torrent;
@@ -52,16 +57,16 @@ torrentService.updateTorrentsStatus = function() {
 };
 
 torrentService.updateDataForTorrentsOld = function() {
-  log.debug("Updating torrents..");
+  logger.debug("Updating torrents..");
   transmissionService.status().then(function(data) {
     var torrentsResponse = data.arguments.torrents;
     if (torrentsResponse.length == 0) {
-      log.debug("Torrent response from transmission is empty -- no torrents added or downloading");
+      logger.debug("Torrent response from transmission is empty -- no torrents added or downloading");
       utilService.stopInterval('torrentsStatus');
     } else {
       Promise.map(torrentsResponse, function(oneTorrentResponse) {
         // Promise.map awaits for returned promises as well.
-        log.debug("Processing response for torrent hash: ", oneTorrentResponse.hashString);
+        logger.debug("Processing response for torrent hash: ", oneTorrentResponse.hashString);
         return processSingleTorrentResponse(oneTorrentResponse);
       });
     }
@@ -75,12 +80,12 @@ torrentService.requestStatus = () => {
 // In response to a STATUS request
 torrentService.updateDbWithTorrentDataFromTransmission = function(torrentsResponse) {
     if (torrentsResponse.length == 0) {
-        log.debug("Torrent response from transmission is empty -- no torrents added or downloading");
+        logger.debug("Torrent response from transmission is empty -- no torrents added or downloading");
         utilService.stopInterval('torrentsStatus');
     } else {
         Promise.map(torrentsResponse, function(oneTorrentResponse) {
             // Promise.map awaits for returned promises as well.
-            log.debug("Processing response for torrent hash: ", oneTorrentResponse.hashString);
+            logger.debug("Processing response for torrent hash: ", oneTorrentResponse.hashString);
             return processSingleTorrentResponse(oneTorrentResponse);
         });
     }
@@ -121,7 +126,7 @@ torrentService.setTorrentAsDownloading = (torrentHash) => {
 }
 
 torrentService.resumeTorrent = function(torrentHash) {
-    log.debug("Resuming torrent: ", torrentHash);
+    logger.debug("Resuming torrent: ", torrentHash);
     process.nextTick(function () {
         torrentService.updateTorrentsStatus();
     });
@@ -148,21 +153,21 @@ torrentService.startTorrentDownload = function (torrent) {
 
     if (torrentFileLink) {
         existingTorrentPromise = torrentService.findTorrentByFileLink(torrent.torrentFileLink);
-        log.debug("[TORRENT-START] Starting download from torrent file: ", torrentFileLink);
+        logger.debug("[TORRENT-START] Starting download from torrent file: ", torrentFileLink);
         link = torrentFileLink;
     } else if (magnetLink) {
         existingTorrentPromise = torrentService.findTorrentByMagnetLink(torrent.magnetLink);
-        log.debug("[TORRENT-START] Starting download from torrent magnet: ", magnetLink);
+        logger.debug("[TORRENT-START] Starting download from torrent magnet: ", magnetLink);
         link = magnetLink;
     }
 
     torrent.title = torrent.torrentName =
         torrent.title || torrent.torrentName || torrentUtilsService.getNameFromMagnetLinkOrTorrentFile(link);
 
-    log.debug("[TORRENT-START] Torrent title: ", torrent.title);
+    logger.debug("[TORRENT-START] Torrent title: ", torrent.title);
 
     torrent.guid = utilService.generateGuid();
-    log.debug("[TORRENT-START] Guid generated is: ", torrent.guid);
+    logger.debug("[TORRENT-START] Guid generated is: ", torrent.guid);
     return existingTorrentPromise
         .then(torrentService.startNewTorrentOrFail(torrent));
 }
@@ -174,16 +179,16 @@ torrentService.startNewTorrentOrFail = (newTorrent) => {
             (existingTorrent !== null && existingTorrent.state == TorrentState.AWAITING_DOWNLOAD) ||
             (existingTorrent !== null && existingTorrent.state == TorrentState.NEW)) {
 
-            log.debug("[TORRENT-START] No existing torrent, starting and persisting now: ", newTorrent.torrentFileLink);
+            logger.debug("[TORRENT-START] No existing torrent, starting and persisting now: ", newTorrent.torrentFileLink);
             return torrentService.startDownloadInTransmission(newTorrent);
         } else {
-            log.debug("[TORRENT-START] Torrent exists, checking state ", existingTorrent);
+            logger.debug("[TORRENT-START] Torrent exists, checking state ", existingTorrent);
             // This torrent is already downloading or terminated
             var msg = "The provided torrent is already downloading or finished (duplicate): " + existingTorrent.torrentName;
             if (existingTorrent.state === TorrentState.DOWNLOADING) {
-                log.info("Torrent is already downloading with hash: ", existingTorrent.hash);
+                logger.info("Torrent is already downloading with hash: ", existingTorrent.hash);
             } else {
-                log.error("[TORRENT-START] ", msg);
+                logger.error("[TORRENT-START] ", msg);
                 throw {name: 'DUPLICATE_TORRENT', message: msg, status: 400};
             }
         }
@@ -208,7 +213,7 @@ torrentService.findByHashOrGuid = (torrent) => {
     return torrentService.findByGuid(torrent.guid);
   } else {
     var msg = "Torrent hash or GUID is needed";
-    log.error(msg);
+    logger.error(msg);
     throw {name: "INVALID_TORRENT", message: msg, status: 400 };
   }
 };
@@ -232,10 +237,10 @@ torrentService.startDownloadInTransmission = function (torrent) {
     torrent.state = TorrentState.DOWNLOADING;
     torrent.title = torrent.torrentName;
 
-    log.debug('[TORRENT-START] About to persist the starting torrent', torrent);
+    logger.debug('[TORRENT-START] About to persist the starting torrent', torrent);
     torrentService.persistTorrent(torrent); // Not waiting for it
 
-    log.debug("[TORRENT-START] Sending message to start");
+    logger.debug("[TORRENT-START] Sending message to start");
     return tvsterMessageService.startDownload(torrent);
 };
 
@@ -254,9 +259,9 @@ torrentService.populateTorrentWithResponseData = function(startTorrentResponse, 
     torrentName = torrentName.replace(' ', '.');
     var torrentHash = torrentResponse.hashString;
     var percentDone = 100 * torrentResponse.percentDone;
-    log.debug("[TORRENT-START-AFTER] Fetching with GUID: ", guid);
+    logger.debug("[TORRENT-START-AFTER] Fetching with GUID: ", guid);
     return torrentService.findByGuid(guid).then(function(existingTorrent) {
-      log.debug("[TORRENT-START-AFTER] Found torrent with GUID ", guid, " -- ", existingTorrent);
+      logger.debug("[TORRENT-START-AFTER] Found torrent with GUID ", guid, " -- ", existingTorrent);
       return createOrUpdateTorrentData(existingTorrent, torrentHash, torrentName, filePath, percentDone);
     });
   }
@@ -279,7 +284,7 @@ torrentService.saveTorrentWithStateUsingHash = function(torrentHash, torrentStat
             torrentFound.state = torrentState;
             return torrentFound.save();
         } else {
-            log.warn("[WARNING] The torrent with hash ${torrentHash} does not exist");
+            logger.warn("[WARNING] The torrent with hash ${torrentHash} does not exist");
         }
     });
 };
@@ -312,7 +317,7 @@ torrentService.handleErrorStartingTorrent = (torrent) => {
 }
 
 torrentService.handleStartingTorrentError = (torrent, error) => {
-    log.error("An error occurred starting torrent ", torrent.guid, " -- marking as failed: ", error);
+    logger.error("An error occurred starting torrent ", torrent.guid, " -- marking as failed: ", error);
     torrent.state = TorrentState.FAILED;
     //TODO: throw the error as well, so the API layer picks it
     return torrentService.updateTorrent(torrent);
@@ -322,11 +327,11 @@ torrentService.handleStartingTorrentError = (torrent, error) => {
 
 const repeatRenameCheck = () => {
     if (utilService.getExecutions('renamer') < 10) {
-        log.debug("[RENAMER] Scheduling new rename checker ...");
+        logger.debug("[RENAMER] Scheduling new rename checker ...");
         utilService.increaseExecutions('renamer');
         setTimeout(getFilebotService().renameChecking, 5000);
     } else {
-        log.debug("[RENAMER] Ending scheduler for rename checker");
+        logger.debug("[RENAMER] Ending scheduler for rename checker");
     }
 };
 
@@ -335,10 +340,10 @@ const mapAndUpdateTorrent = (currentTorrent) => {
     // The fulfilled value of the query is set in the then() closure from the caller (this one)
     return function (storedTorrent) {
         if (storedTorrent === null) {
-            log.debug("[TORRENT-UPDATE] Torrent not found -- aborting update");
+            logger.debug("[TORRENT-UPDATE] Torrent not found -- aborting update");
             return null;
         } else {
-            log.debug("[TORRENT-UPDATE] Updating torrent with GUID ", storedTorrent.guid);
+            logger.debug("[TORRENT-UPDATE] Updating torrent with GUID ", storedTorrent.guid);
             // Put currentTorrent on top of storedTorrent
             _.extend(storedTorrent, currentTorrent);
             return storedTorrent.save();
@@ -371,7 +376,7 @@ function deleteAndRestartTorrentChain(existingTorrent, currentTorrent) {
 function createOrUpdateTorrentData(existingTorrent, torrentHash, torrentName, filePath, percentDone) {
   var torrent = {};
 
-  log.debug("[TORRENT-START-AFTER] Generating torrent from response with hash: ", torrentHash);
+  logger.debug("[TORRENT-START-AFTER] Generating torrent from response with hash: ", torrentHash);
 
   torrent.hash = torrentHash;
   torrent.dateStarted = moment.utc().toDate();
@@ -382,15 +387,15 @@ function createOrUpdateTorrentData(existingTorrent, torrentHash, torrentName, fi
   torrent.percentDone = 0;
 
   if (existingTorrent !== null) {
-    log.debug("[TORRENT-START-AFTER] Before: ", existingTorrent);
+    logger.debug("[TORRENT-START-AFTER] Before: ", existingTorrent);
     _.extend(existingTorrent, torrent);
-    log.debug("[TORRENT-START-AFTER] After: ", existingTorrent);
-    log.debug("[TORRENT-START-AFTER] Found torrent already in database, updating with hash ",
+    logger.debug("[TORRENT-START-AFTER] After: ", existingTorrent);
+    logger.debug("[TORRENT-START-AFTER] Found torrent already in database, updating with hash ",
               existingTorrent.hash, " - ", torrentName);
     return existingTorrent.save();
   } else {
     torrent.guid = utilService.generateGuid();
-    log.warn("[TORRENT-START-AFTER] Warning! Torrent not found -- creating now");
+    logger.warn("[TORRENT-START-AFTER] Warning! Torrent not found -- creating now");
     return torrentService.persistTorrent(torrent);
   }
 }
@@ -404,9 +409,9 @@ function processSingleTorrentResponse(torrentResponse) {
 function createOrUpdateTorrentClosure(torrentResponse, torrentHash) {
   return (existingTorrent) => {
     if (existingTorrent === null) {
-      log.debug("Torrent does not exist in DB with hash: " + torrentHash + " -- transmission response should create it");
+      logger.debug("Torrent does not exist in DB with hash: " + torrentHash + " -- transmission response should create it");
     } else {
-      log.debug("Torrent exists: " + torrentHash + " -- updating");
+      logger.debug("Torrent exists: " + torrentHash + " -- updating");
       return updateExistingTorrentFromResponse(existingTorrent, torrentResponse);
     }
   }
@@ -415,10 +420,10 @@ function createOrUpdateTorrentClosure(torrentResponse, torrentHash) {
 function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
 
     var torrentState = existingTorrent.state;
-    log.debug(">>> Percent in response is: " + torrentResponse.percentDone);
+    logger.debug(">>> Percent in response is: " + torrentResponse.percentDone);
     var percent = 100 * torrentResponse.percentDone;
     var percentDone = Math.round(100 * percent) / 100;
-    log.debug("Calculated percent: " + percentDone);
+    logger.debug("Calculated percent: " + percentDone);
     existingTorrent.magnetLink = torrentResponse.magnetLink;
     var torrentName = existingTorrent.torrentName;
     var currentPercent = existingTorrent.percentDone;
@@ -428,8 +433,8 @@ function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
     var torrentSizeMb = Math.round((torrentSize / 1024) / 1024);
     existingTorrent.size = existingTorrent.size || torrentSizeMb;
 
-    log.debug("[UPDATE-TORRENTS] Torrent response for: ", torrentResponse.name, percentDone, '%');
-    log.debug("[UPDATE-TORRENTS] Torrent DB: ", torrentName, ' is ', torrentState,
+    logger.debug("[UPDATE-TORRENTS] Torrent response for: ", torrentResponse.name, percentDone, '%');
+    logger.debug("[UPDATE-TORRENTS] Torrent DB: ", torrentName, ' is ', torrentState,
         ' stored percentage is ', currentPercent);
 
     if (percentDone !== null && 
@@ -447,7 +452,7 @@ function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
 
         if (torrentState !== TorrentState.DOWNLOADING && torrentState !== TorrentState.PAUSED) {
             existingTorrent.state = TorrentState.DOWNLOADING;
-            log.debug("Torrent ", torrentName, " found in DB, setting as DOWNLOADING");
+            logger.debug("Torrent ", torrentName, " found in DB, setting as DOWNLOADING");
         }
 
     } else if (percentDone >= 100 &&
@@ -457,25 +462,26 @@ function updateExistingTorrentFromResponse(existingTorrent, torrentResponse) {
         existingTorrent.percentDone = 100;
         existingTorrent.state = TorrentState.DOWNLOAD_COMPLETED;
         existingTorrent.dateFinished = moment.utc().toDate(); //only date objects are valid in sequelize
-        log.info("[UPDATE-TORRENTS] Torrent ", torrentName, " finished downloading -- DOWNLOAD_COMPLETED");
+        logger.info("[UPDATE-TORRENTS] Torrent ", torrentName, " finished downloading -- DOWNLOAD_COMPLETED");
     }
 
     return existingTorrent.save().then((savedTorrent) => {
         // Clear finished torrents from Transmission directly
         if (torrentState === TorrentState.RENAMING_COMPLETED || torrentState === TorrentState.COMPLETED) {
-            log.info("Torrent " + savedTorrent.hash + ": " + torrentState + " -- removing from Transmission");
+            logger.info("Torrent " + savedTorrent.hash + ": " + torrentState + " -- removing from Transmission");
             return torrentService.cancelTorrentInTransmission(savedTorrent.hash);
         }
 
         if (torrentState === TorrentState.DOWNLOAD_COMPLETED) {
-            log.info("Checking renamer...");
+            logger.info("Checking renamer...");
             renameCheck();
         }
     });
 }
 
 const renameCheck = () => {
-    log.debug("Running renameCheck... ");
+    debug("Logger is %s", JSON.stringify(logger));
+    logger.debug("Running renameCheck... ");
     //TODO: enable when renamer ready
     return torrentService.findTorrentsWithState(TorrentState.RENAMING)
                          .then(startRenamer);
@@ -483,7 +489,7 @@ const renameCheck = () => {
 
 const startRenamer = (renamingTorrents) => {
     if (renamingTorrents == null || renamingTorrents.length == 0) {
-        log.info("[RENAMER] Checking if there are torrents to rename...");
+        logger.info("[RENAMER] Checking if there are torrents to rename...");
         // Find torrents in DOWNLOAD_COMPLETED state
         return torrentService.findTorrentsWithState(TorrentState.DOWNLOAD_COMPLETED).then((torrents) => {
             if (torrents && torrents.length > 0) {
@@ -492,12 +498,12 @@ const startRenamer = (renamingTorrents) => {
                     return tvsterMessageService.startRename(torrents, settings);
                 });
             } else {
-                log.info("[RENAMER] There is no torrents to rename, checking subtitles");
+                logger.info("[RENAMER] There is no torrents to rename, checking subtitles");
                 return torrentService.checkStartSubtitles();
             }
         });
     } else {
-        log.warn("Torrents are already renaming", renamingTorrents);
+        logger.warn("Torrents are already renaming", renamingTorrents);
     }
 }
 
@@ -509,7 +515,7 @@ const startSubtitlesIfNotInProgress = (subtitlingTorrents) => {
     if (!subtitlingTorrents || subtitlingTorrents.length == 0) {
         return torrentService.findTorrentsWithState(TorrentState.RENAMING_COMPLETED).then(startFetchingSubtitles);
     } else {
-        log.warn("Torrents are already in progress for subtitle fetching", subtitlingTorrents);
+        logger.warn("Torrents are already in progress for subtitle fetching", subtitlingTorrents);
     }
 }
 
@@ -520,7 +526,7 @@ const startFetchingSubtitles = (torrents) => {
             return tvsterMessageService.startSubtitles(torrents, settings);
         });
     } else {
-        log.info("There is not torrents to fetch subtitles for");
+        logger.debug("There is not torrents to fetch subtitles for");
     }
 }
 torrentService.setTorrentAsRenaming = (torrentHash) => {

@@ -1,0 +1,18 @@
+{
+  "appenders": [
+    {
+      "type": "file",
+      "filename": "/tmp/tvster.log",
+      "maxLogSize": 1024,
+      "backups": 3,
+      "category": ["cheese","stdout"]
+    },
+    {
+      "type":"stdout"
+    }
+  ],
+  "levels": {
+    "file": "DEBUG",
+    "stdout": "INFO"
+  }
+}

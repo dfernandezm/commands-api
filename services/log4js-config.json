@@ -1,0 +1,17 @@
+{
+  "appenders": [
+    {
+      "type": "file",
+      "filename": "/tmp/tvster.log",
+      "maxLogSize": 1024,
+      "backups": 3,
+      "category": ["default","console"]
+    },
+    {
+      "type":"console"
+    }
+  ],
+  "levels": {
+    "default": "DEBUG"
+  }
+}

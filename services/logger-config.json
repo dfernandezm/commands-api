@@ -1,0 +1,16 @@
+{
+"appenders": [
+{
+"type": "file",
+  "filename": "important-things.log",
+  "maxLogSize": 1024,
+  "numBackups": 5,
+  "compress": true,
+  "encoding": "utf-8",
+  "flags": "w+"
+},
+{
+"type": "stdout"
+}
+]
+}
