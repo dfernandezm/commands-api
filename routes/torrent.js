@@ -61,9 +61,17 @@ router.put('/api/torrents/resume/:hash', function(req, res) {
 router.put('/api/torrents/rename/:hash', function(req, res) {
   let torrentHash = req.params.hash;
   log.info("The hash is " + torrentHash);
-  filebotService.renameTorrent(torrentHash).then(function(result) {
-    res.json({job: result});
+  torrentService.rename(torrentHash).then(function(result) {
+    res.json({torrent: result});
   }).catch(utilService.handleApiError(res));
+});
+
+router.put('/api/torrents/subtitles/:hash', function(req, res) {
+    let torrentHash = req.params.hash;
+    log.info("The hash is " + torrentHash);
+    torrentService.fetchSubtitles(torrentHash).then(function(result) {
+        res.json({torrent: result});
+    }).catch(utilService.handleApiError(res));
 });
 
 module.exports = router;

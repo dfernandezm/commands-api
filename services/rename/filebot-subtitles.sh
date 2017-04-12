@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Comma separated paths to fetch subtitles for
 INPUT_PATHS=$1

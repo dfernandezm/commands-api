@@ -107,31 +107,36 @@ renameExecutor.startMonitoringProcess = (filebotProcess, torrents, isRenamer) =>
         });
 
         filebotProcess.stderr.on('data', function (data) {
-            lastError = data;
+            lastError = data.toString();
             debug('[FILEBOT-COMMAND-ERROR]: ' + lastError);
 
         });
 
-        filebotProcess.on('close',  (exitCode) => {
-            debug("Filebot Process exited with code: %s",exitCode);
+        filebotProcess.on('exit',  (exitCode) => {
+            let exitCodeNum = parseInt(exitCode);
+            debug("Filebot Process exited with code: %s",exitCodeNum);
             const tvsterMessageService = require("../sqs/tvsterMessageService");
             if (isRenamer) {
                 debug("Completed Renames %o", completedRenames);
-                if (exitCode !== 0) {
+                if (exitCodeNum !== 0) {
                     tvsterMessageService.renameCompleted({status: "failure", renamedTorrents: completedRenames});
                 } else {
                     tvsterMessageService.renameCompleted({status: "success", renamedTorrents: completedRenames});
                 }
-                debug("========Sent rename completed========");
+                debug("======== Sent rename completed ========");
             } else {
                 debug("Completed subtitles %o", torrentsToFetchSubs);
-                if (exitCode !== 0) {
-                    tvsterMessageService.subtitlesCompleted({status: "failure", error: lastError});
+                if (exitCodeNum !== 0) {
+                    let subtitlesResult = {};
+                    torrentsToFetchSubs.forEach(torrent => {
+                        subtitlesResult[torrent.hash] = {status: "failure", error: lastError};
+                    });
+                    tvsterMessageService.subtitlesCompleted(subtitlesResult);
                 } else {
                     validateSubtitledTorrents(torrentsToFetchSubs).then(validationResults => {
                         debug("Validation results %s", JSON.stringify(validationResults));
                         tvsterMessageService.subtitlesCompleted({status: "success", subtitlesResult: validationResults});
-                        debug("====== Send subtitles completed ======");
+                        debug("====== Sent subtitles completed ======");
                     }).catch(err => {
                         debug("Error occurred %o", err);
                         let torrentsMap = buildTorrentsMap(torrentsToFetchSubs, err);

@@ -1,7 +1,7 @@
 /**
  * Created by david on 11/03/2017.
  */
-const debug = require("debug")("services/sqs:downloadOperationHandlers");
+// const debug = require("debug")("services/sqs:downloadOperationHandlers");
 const log = require("../logger");
 const sqsService = require("./sqsService");
 const messageTypes = require("./messageTypes");
@@ -63,13 +63,13 @@ downloadOperationHandlers.handlePauseDownloadRequest = (messageContent) => {
 
 // On API, handle response from worker after pausing
 downloadOperationHandlers.handlePauseDownloadResponse = (messageContent) => {
-    debug("Received response from Pause Download", messageContent);
+    log.debug("Received response from Pause Download", messageContent);
     const torrentService = require("../torrentService");
     if (messageContent.result === "success") {
         return torrentService.setTorrentAsPaused(messageContent.torrentHash);
     } else {
         //failure
-        debug("Could not pause torrent", messageContent.error);
+        log.warn("Could not pause torrent", messageContent.error);
     }
 }
 
@@ -91,14 +91,14 @@ downloadOperationHandlers.handleCancelDownloadRequest = (messageContent) => {
 
 // On API, handle response from worker after cancelling
 downloadOperationHandlers.handleCancelDownloadResponse = (messageContent) => {
-    debug("Received response from Cancel Download", messageContent);
+    log.debug("Received response from Cancel Download", messageContent);
     const torrentService = require("../torrentService");
     if (messageContent.result === "success") {
-        debug("Successfully cancelled torrent in Transmission", messageContent.torrentHash);
+        log.debug("Successfully cancelled torrent in Transmission", messageContent.torrentHash);
         return messageContent.torrentHash;
     } else {
         // Failure
-        debug("Could not cancel torrent", messageContent.error);
+        log.debug("Could not cancel torrent", messageContent.error);
     }
 }
 
@@ -118,13 +118,13 @@ downloadOperationHandlers.handleStatusRequest = () => {
 
 // API call this as a response from getStatus request
 downloadOperationHandlers.handleStatusResponse = (messageContent) => {
-    debug("Received response for status", messageContent);
+    log.debug("Received response for status", messageContent);
     const torrentService = require("../torrentService");
     if (messageContent.result === "success") {
         return torrentService.updateDbWithTorrentDataFromTransmission(messageContent.torrentsResponse);
     } else {
         //failure
-        debug("There was an error getting status %o", messageContent.error);
+        log.debug("There was an error getting status %o", messageContent.error);
     }
 }
 
@@ -146,19 +146,19 @@ downloadOperationHandlers.handleResumeDownloadRequest = (messageContent) => {
 
 // On API, handle response from worker after resuming
 downloadOperationHandlers.handleResumeDownloadResponse = (messageContent) => {
-    debug("Received response from Resume Download", messageContent);
+    log.debug("Received response from Resume Download", messageContent);
     const torrentService = require("../torrentService");
     if (messageContent.result === "success") {
         return torrentService.setTorrentAsDownloading(messageContent.torrentHash);
     } else {
         //failure
-        debug("Could not resume torrent", messageContent.error);
+        log.debug("Could not resume torrent", messageContent.error);
     }
 }
 
 // The API executes this handler as a response from startDownload
 downloadOperationHandlers.handleStartDownloadResponse = (messageContent) => {
-    debug("Received response for start download", messageContent);
+    log.debug("Received response for start download", messageContent);
     const torrentService = require("../torrentService");
     if (messageContent.result === "success") {
         return torrentService.populateTorrentWithResponseData(messageContent.response, messageContent.torrentGuid);
@@ -233,8 +233,5 @@ const getResponseSuccessClosure = (requestType, successfulContentGenerator) => {
         return sendResponse(requestType, successfulContentGenerator(result), "success");
     };
 }
-
-
-
 
 module.exports = downloadOperationHandlers;

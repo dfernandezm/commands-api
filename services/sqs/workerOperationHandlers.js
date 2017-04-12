@@ -111,7 +111,7 @@ const handleUpdatedTorrentsInApi = (torrent, workerOperationType, torrentService
     return () => {
         if (torrent.state === TorrentState.RENAMING_COMPLETED && workerOperationType === workerOperationTypes.RENAME) {
             debug("Clearing RENAMING_COMPLETED torrent %s from tranmission");
-            torrentService.cancelTorrentInTransmission(torrentHash);
+            torrentService.cancelTorrentInTransmission(torrent.hash);
         }
 
         if (torrent.state === TorrentState.RENAMING_COMPLETED && workerOperationType === workerOperationTypes.SUBTITLES ||
@@ -142,7 +142,7 @@ workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperation
     }
 
     if (workerOperationType === workerOperationTypes.SUBTITLES) {
-        torrents = messageContent.subtitlesResult.subtitlesResult;
+        torrents = messageContent.subtitlesResult;
         status = messageContent.subtitlesResult.status;
         targetState = TorrentState.COMPLETED;
         fallbackState = TorrentState.RENAMING_COMPLETED;
@@ -152,10 +152,16 @@ workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperation
         if (torrents.hasOwnProperty(torrentHash)) { // As we are iterating over object properties which include generic ones
             let torrent = {};
             debug("Torrent hash %s", torrentHash);
+            try {
+                status = torrents[torrentHash].status;
+            } catch (err) {
+                log.warn("Error getting status",err);
+            }
+
             if (status && status === "failure") {
                 torrent.hash = torrentHash;
                 torrent.state = fallbackState;
-                debug("Failure detected fetching subtitles, it will retry, error %s", JSON.stringify(messageContent));
+                debug("Failure detected it will fallback to %s, it will retry, error %s", fallbackState, JSON.stringify(messageContent));
             } else {
                 torrent.hash = torrentHash;
                 torrent.state = targetState;
@@ -167,7 +173,6 @@ workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperation
                     torrent.renamedPath = separatedRenamedPaths;
                 } else {
                     let subtitledPaths = torrents[torrentHash];
-
                     let areAllSubtitled = subtitledPaths.reduce((acc, item) => {
                         debug("Subtitled path %s - %s", item.singlePath, item.subtitleForPath);
                         return acc && item.subtitleForPath;

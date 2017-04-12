@@ -1,7 +1,7 @@
 var log = require('./logger');
 var settingsService = require('./settingsService');
 var MAX_TRIES = 5;
-
+const _ = require("lodash");
 var Powersteer = require('powersteer');
 var transmissionClient = new Powersteer({
     url: 'http://:9091/transmission/rpc',
@@ -10,7 +10,7 @@ var transmissionClient = new Powersteer({
 });
 
 var transmissionService = {};
-var globalIntervals = {};
+const videoExtensions = [ "mkv", "mp4", "avi" ];
 
 transmissionService.testConnection = function () {
 
@@ -150,28 +150,28 @@ function returnResult(result) {
   return result;
 }
 
-function getTorrentSubfolderPath(torrentName, torrentHash) {
-  return settingsService.getDefaultTransmissionSettings()
-                        .then(composeRelocatePath(torrentName, torrentHash));
-}
-
-
-
-/**
-* This function returns the function that 'then' wants, but also adds some extra
-* information via closure binding.
-*/
-function composeRelocatePath(torrentName, torrentHash) {
-  return function (transmissionSettings) {
-    return getDownloadingTorrentsSubfolderPath(transmissionSettings.baseDownloadsDir, torrentName, torrentHash);
-  }
-}
-
 const getDownloadingTorrentsSubfolderPath = (baseDownloadsDir, torrentName, torrentHash) => {
-    var newPath = baseDownloadsDir + "/" +
-        torrentName + "_" + torrentHash;
-    log.info("New Path to relocate is: " + newPath);
-    return newPath;
+
+    try {
+
+        let filtered = videoExtensions.filter((ext) => {
+            return _.endsWith(torrentName.toLowerCase(), ext.toLowerCase());
+        });
+
+        if (filtered.length > 0) {
+            log.warn("Torrent %s ends with video extension, this could create Filebot issues, stripping out from new path",torrentName);
+            torrentName = torrentName.replace("." + filtered[0], "");
+        }
+
+        let newPath = baseDownloadsDir + "/" + torrentName + "_" + torrentHash;
+
+        log.info("New Path to relocate is %s",newPath);
+        return newPath;
+    } catch(err) {
+        log.error("Error calculating new path", err);
+        throw err;
+    }
+
 }
 
 module.exports = transmissionService;
