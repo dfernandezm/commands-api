@@ -142,7 +142,7 @@ workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperation
     }
 
     if (workerOperationType === workerOperationTypes.SUBTITLES) {
-        torrents = messageContent.subtitlesResult;
+        torrents = messageContent.subtitlesResult.subtitlesResult;
         status = messageContent.subtitlesResult.status;
         targetState = TorrentState.COMPLETED;
         fallbackState = TorrentState.RENAMING_COMPLETED;
@@ -173,10 +173,17 @@ workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperation
                     torrent.renamedPath = separatedRenamedPaths;
                 } else {
                     let subtitledPaths = torrents[torrentHash];
-                    let areAllSubtitled = subtitledPaths.reduce((acc, item) => {
-                        debug("Subtitled path %s - %s", item.singlePath, item.subtitleForPath);
-                        return acc && item.subtitleForPath;
-                    }, true);
+
+                    let areAllSubtitled = false;
+
+                    if (subtitledPaths) {
+                        areAllSubtitled = subtitledPaths.reduce((acc, item) => {
+                            debug("Subtitled path %s - %s", item.singlePath, item.subtitleForPath);
+                            return acc && item.subtitleForPath;
+                        }, true);
+                    } else {
+                        debug("No subtitled paths returned %o", subtitledPaths);
+                    }
 
                     if (!areAllSubtitled) {
                         debug("There are some paths with missing subtitles, setting back as RENAMING_COMPLETED");

@@ -38,6 +38,7 @@ do
     RM_COPIED_CMD="rm $TMPDIR/*.srt"
 
     echo "Executing $COPY_IN_CMD"
+    set +e
     eval $COPY_IN_CMD
 
     RENAME_CMD="rename 's/\.$THREE_CODE_LANG\.srt/\.$TWO_CODE_LANG.srt/' $TMPDIR/*.$THREE_CODE_LANG.srt"
@@ -48,7 +49,6 @@ do
     eval $COPY_BACK_CMD
 
     echo "Deleting temporary subs $RM_COPIED_CMD"
-    set +e
     eval $RM_COPIED_CMD
     set -e
   done
