@@ -1,10 +1,10 @@
-var router = require('./router');
-var crawlerService = require('../services/crawlers/crawlerService');
+const router = require('./router');
+const log = require("../services/logger");
 
 // For all routes
 router.use(function(req, res, next) {
     // do logging
-    console.log("Invoking routes", req.url);
+    log.debug("Invoking routes", req.url);
     next(); // make sure we go to the next routes and don't stop here
 });
 

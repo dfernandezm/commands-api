@@ -2,6 +2,7 @@
  * Created by david on 02/03/2017.
  */
 const debug = require("debug")("services/sqs:tvsterMessageService");
+const log = require("../logger");
 const sqsService = require("./sqsService");
 const messageTypes = require("./messageTypes");
 const utils = require("../utilService");
@@ -71,7 +72,8 @@ const workerMessageReceivedHandler = (rawMessage) => {
             workerOperationHandlers.handleStartWorkerRequest(message.content, workerOperationTypes.SUBTITLES);
             break;
         default:
-            debug("Message type not recognized: {} -- it will be ignored", message.type);
+            log.warn("Message type not recognized: {} -- it will be ignored", message.type);
+            return {};
     }
 }
 
@@ -85,7 +87,8 @@ const apiMessageReceivedHandler = (rawMessage) => {
         case messageTypes.SUBTITLES_COMPLETED:
             return workerOperationHandlers.handleWorkerCompleted(message.content, workerOperationTypes.SUBTITLES);
         default:
-            debug("Message type not recognized: {} -- it will be ignored", message.type);
+            log.warn("Message type not recognized: {} -- it will be ignored", message.type);
+            return {};
     }
 }
 
@@ -113,15 +116,14 @@ const handleAllResponseMessages = (message) => {
 
 tvsterMessageService.startListener = () => {
     if (utils.isWorker()) {
-        debug("Initializing queue poller in Tvster Organizer Worker");
+        log.info("Initializing queue poller in Tvster Organizer Worker");
         sqsService.setupMessageConsumer(workerMessageReceivedHandler);
     } else {
-        debug("Initializing queue poller in Tvster API");
+        log.info("Initializing queue poller in Tvster API");
         sqsService.setupMessageConsumer(apiMessageReceivedHandler);
     }
 }
 
-debug("About to start Listener");
 tvsterMessageService.startListener();
 
 module.exports = tvsterMessageService;

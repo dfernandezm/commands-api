@@ -13,6 +13,7 @@ const transactionUtilsService = require('./transactionUtilsService');
 const filebotService = require('./filebotService');
 const tvsterMessageService = require("./sqs/tvsterMessageService");
 const settingsService = require('./settingsService');
+const cacheService = require("./cache/cacheService");
 
 const torrentService = {};
 
@@ -26,13 +27,19 @@ const requestStatus = () => {
     return tvsterMessageService.getStatus();
 }
 
+const isRenameCheckCancelled = () => {
+    return cacheService.get(cacheService.keys.CANCELLED_STATUS_POLLER_KEY) !== null;
+}
+
 torrentService.getCurrentStatus = function () {
     let upperDate = moment().utc().toDate();
     let lowerMoment = moment().utc();
     lowerMoment.subtract(2, 'weeks');
     let lowerDate = lowerMoment.toDate();
 
-    utilService.startNewInterval("renameCheck", renameCheck, 5000);
+    if (!isRenameCheckCancelled()) {
+        utilService.startNewInterval("renameCheck", renameCheck, 5000);
+    }
 
     // select t from torrent
     // where (dateStarted is not null and dateStarted between :lower and :upper)
@@ -57,15 +64,15 @@ torrentService.getCurrentStatus = function () {
     });
 };
 
-torrentService.updateTorrentsStatus = function () {
-    utilService.startNewInterval('torrentsStatus',  requestStatus, 5000);
+torrentService.updateTorrentsStatus = () => {
+    utilService.startNewInterval("torrentsStatus",  requestStatus, 5000);
 };
 
 // In response to a STATUS request
 torrentService.updateDbWithTorrentDataFromTransmission = function (torrentsResponse) {
     if (torrentsResponse.length == 0) {
         log.debug("Torrent response from transmission is empty -- no torrents added or downloading");
-        utilService.stopInterval('torrentsStatus');
+        utilService.stopInterval("torrentsStatus");
     } else {
         // Do not return promise on purpose as caller won't wait for it to settle
         Promise.map(torrentsResponse, function (oneTorrentResponse) {
@@ -176,8 +183,7 @@ torrentService.startNewTorrentOrFail = (newTorrent) => {
 };
 
 torrentService.delete = function (torrentHashOrGuid) {
-    return Torrent.destroy(
-        {
+    return Torrent.destroy({
             where: {
                 $or: {
                     hash: torrentHashOrGuid,
@@ -221,7 +227,7 @@ torrentService.startDownloadInTransmission = function (torrent) {
     log.debug('About to persist the starting torrent', torrent);
     torrentService.persistTorrent(torrent); // Not waiting for it
 
-    log.debug("Sending message SQS to start download");
+    log.debug("Sending message to start download");
     return tvsterMessageService.startDownload(torrent);
 };
 
@@ -299,7 +305,7 @@ torrentService.handleErrorStartingTorrent = (torrent) => {
 torrentService.handleStartingTorrentError = (torrent, error) => {
     log.error("An error occurred starting torrent ", torrent.guid, " -- marking as failed: ", error);
     torrent.state = TorrentState.FAILED;
-    return torrentService.updateTorrent(torrent);
+    return torrentService.updateTorrent(torrent).then(() => {throw error;});
 }
 
 // --------------------------------------- PRIVATE -----------------------------------
@@ -340,7 +346,7 @@ function createOrUpdateTorrentData(existingTorrent, torrentHash, torrentName, fi
         return existingTorrent.save();
     } else {
         torrent.guid = utilService.generateGuid();
-        log.warn("Warning! Torrent not found -- creating now");
+        log.warn("Torrent not found -- creating now");
         return torrentService.persistTorrent(torrent);
     }
 }
@@ -442,68 +448,81 @@ const startRenamer = (renamingTorrents) => {
                 });
             } else {
                 log.debug("There is no torrents to rename, checking subtitles");
-                return torrentService.checkStartSubtitles();
+                return torrentService.startSubtitlesIfNotInProgress();
             }
         });
     } else {
-        log.warn("Torrents are already renaming", renamingTorrents);
-    }
-}
-
-torrentService.rename = (torrentHash) => {
-    return torrentService.findByHash(torrentHash).then(torrent => {
-       if (torrent) {
-           let torrents = [torrent];
-           settingsService.getDefaultMediacenterSettings().then(settings => {
-               return tvsterMessageService.startRename(torrents, settings);
-           }).then(() => {
-               torrentService.setTorrentAsRenaming(torrentHash);
-           });
-           torrent.state = "RENAMING";
-           return torrent;
-       }
-    });
-}
-
-torrentService.fetchSubtitles = (torrentHash) => {
-    return torrentService.findByHash(torrentHash).then(torrent => {
-        if (torrent) {
-            let torrents = [torrent];
-            settingsService
-                .getDefaultMediacenterSettings()
-                .then(settings => {
-                    return tvsterMessageService.startSubtitles(torrents, settings);
-                }).then(() => {
-                    torrentService.setTorrentAsFetchingSubtitles(torrentHash);
-                });
-            torrent.state = "FETCHING_SUBTITLES";
-            return torrent;
-        }
-    });
-}
-
-torrentService.checkStartSubtitles = () => {
-    return torrentService.findTorrentsWithState(TorrentState.FETCHING_SUBTITLES).then(startSubtitlesIfNotInProgress);
-}
-
-const startSubtitlesIfNotInProgress = (subtitlingTorrents) => {
-    if (!subtitlingTorrents || subtitlingTorrents.length == 0) {
-        return torrentService.findTorrentsWithState(TorrentState.RENAMING_COMPLETED).then(startFetchingSubtitles);
-    } else {
-        log.warn("Torrents are already in progress for subtitle fetching " + subtitlingTorrents);
+        log.warn("Torrents are already renaming" + renamingTorrents);
     }
 }
 
 const startFetchingSubtitles = (torrents) => {
     if (torrents && torrents.length > 0) {
         //TODO: Cache the settings
-        return settingsService.getDefaultMediacenterSettings().then(settings => {
-            return tvsterMessageService.startSubtitles(torrents, settings);
-        });
+        return settingsService
+            .getDefaultMediacenterSettings()
+            .then(settings => {
+                return tvsterMessageService
+                    .startSubtitles(torrents, settings)
+                    .then(() => { return torrents });
+            });
     } else {
         log.debug("There is no torrents to fetch subtitles for");
+        return [];
     }
+};
+
+const startSubtitlesIfEmptySet = (subtitlingTorrents) => {
+    // If no subtitling ones, start
+    if (!subtitlingTorrents || subtitlingTorrents.length == 0) {
+        return torrentService
+                .findTorrentsWithState(TorrentState.RENAMING_COMPLETED)
+                .then(startFetchingSubtitles);
+    } else {
+        log.warn("Torrents are already in progress for subtitle fetching " + subtitlingTorrents);
+        return [];
+    }
+};
+
+torrentService.startSubtitlesIfNotInProgress = () => {
+    return torrentService
+        .findTorrentsWithState(TorrentState.FETCHING_SUBTITLES)
+        .then(startSubtitlesIfEmptySet);
 }
+
+torrentService.fetchAllSubtitles = () => {
+    return torrentService.startSubtitlesIfNotInProgress().then((subtitlingTorrents) => {
+        if (subtitlingTorrents && subtitlingTorrents.length > 0) {
+            subtitlingTorrents.forEach((torrent) => {
+                torrentService.setTorrentAsFetchingSubtitles(torrent.hash);
+            });
+            torrentService.updateTorrentsStatus();
+        }
+    });
+};
+
+torrentService.rename = (torrentHash) => {
+    return torrentService.findByHash(torrentHash).then(torrent => {
+        if (torrent) {
+            let torrents = [torrent];
+
+            settingsService.getDefaultMediacenterSettings().then(settings => {
+                return tvsterMessageService.startRename(torrents, settings);
+            }).then(() => {
+                torrentService.setTorrentAsRenaming(torrentHash);
+            });
+            torrent.state = TorrentState.RENAMING;
+            torrentService.updateTorrentsStatus();
+            return torrent;
+        }
+    });
+}
+
+torrentService.startRenamingAll = () => {
+    renameCheck();
+    torrentService.updateTorrentsStatus();
+};
+
 torrentService.setTorrentAsRenaming = (torrentHash) => {
     return torrentService.findByHash(torrentHash).then((torrent) => {
         torrent.state = TorrentState.RENAMING;
@@ -518,8 +537,16 @@ torrentService.setTorrentAsFetchingSubtitles = (torrentHash) => {
     });
 }
 
+torrentService.setTorrentAsCompleted = (torrentHash) => {
+    return torrentService.findByHash(torrentHash).then((torrent) => {
+        torrent.state = TorrentState.COMPLETED;
+        return torrent.save();
+    });
+}
+
 torrentService.stopRenameAndSubtitlesInterval = () => {
     utilService.stopInterval("renameCheck");
+    cacheService.writeToCache(cacheService.keys.CANCELLED_STATUS_POLLER_KEY, "true");
 }
 
 module.exports = torrentService;

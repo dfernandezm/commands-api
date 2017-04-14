@@ -10,6 +10,7 @@ const downloadOperationHandlers = require("./downloadOperationHandlers");
 const messageHandlerHelpers = require("./helpers/messageHandlerHelper");
 const workerOperationTypes = require("./helpers/workerOperationTypes");
 const Promise = require("bluebird");
+const log = require("../logger");
 
 const workerOperationHandlers = {};
 
@@ -62,15 +63,15 @@ workerOperationHandlers.handleStartWorkerRequest = (messageContent, workerOperat
         let content = {renamingTorrentsHashes: torrentsHashes};
         if (workerOperationType === workerOperationTypes.RENAME) {
             // List of renaming torrents
-            debug("Renaming torrent hashes", torrentsHashes);
+            log.info("Renaming torrent hashes", torrentsHashes);
         } else {
-            debug("Fetching Subtitles torrent hashes", torrentsHashes);
+            log.info("Fetching Subtitles torrent hashes", torrentsHashes);
             content = {fetchingSubtitlesTorrentsHashes: torrentsHashes};
         }
         return messageHandlerHelpers.sendResponse(messageType, content, statusResult);
     }).catch((error) => {
         statusResult = "failure";
-        debug("Error starting renamer: ", error);
+        log.error("Error starting renamer: ", error);
         let content = {error: error};
         return messageHandlerHelpers.sendResponse(messageType, content, statusResult);
     });
@@ -79,9 +80,9 @@ workerOperationHandlers.handleStartWorkerRequest = (messageContent, workerOperat
 // API: executes this handler as a response from startRename
 workerOperationHandlers.handleStartWorkerResponse = (messageContent, workerOperationType) => {
     if (workerOperationType === workerOperationTypes.RENAME) {
-        debug("Received response for start rename", messageContent);
+        log.info("Received response for start rename", messageContent);
     } else {
-        debug("Received response for start fetching subtitles", messageContent);
+        log.info("Received response for start fetching subtitles", messageContent);
     }
 
     const torrentService = require("../torrentService");
@@ -103,14 +104,14 @@ workerOperationHandlers.handleStartWorkerResponse = (messageContent, workerOpera
         }
     } else {
         //failure
-        debug("Error starting process, torrents will be left untouched", JSON.stringify(messageContent.error));
+        log.warn("Error starting process, torrents will be left untouched", JSON.stringify(messageContent.error));
     }
 }
 
 const handleUpdatedTorrentsInApi = (torrent, workerOperationType, torrentService) => {
     return () => {
         if (torrent.state === TorrentState.RENAMING_COMPLETED && workerOperationType === workerOperationTypes.RENAME) {
-            debug("Clearing RENAMING_COMPLETED torrent %s from tranmission");
+            log.debug("Clearing RENAMING_COMPLETED torrent %s from tranmission");
             torrentService.cancelTorrentInTransmission(torrent.hash);
         }
 
@@ -118,6 +119,7 @@ const handleUpdatedTorrentsInApi = (torrent, workerOperationType, torrentService
             torrent.state === TorrentState.DOWNLOAD_COMPLETED && workerOperationType === workerOperationTypes.RENAME) {
             // Subtitles are missing or incomplete or rename failed, to avoid continuous retry we cancel the poller
             torrentService.stopRenameAndSubtitlesInterval();
+            torrentService.getCurrentStatus();
         }
     }
 }
@@ -126,7 +128,7 @@ const handleUpdatedTorrentsInApi = (torrent, workerOperationType, torrentService
 // to DOWNLOAD_COMPLETED/RENAMING_COMPLETED (the collection comes from renameExecutor)
 workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperationType) => {
 
-    debug("Renamed/Subtitled torrents raw message %s", JSON.stringify(messageContent));
+    log.debug("Renamed/Subtitled torrents raw message %s", JSON.stringify(messageContent));
     const torrentService = require("../torrentService");
 
     let torrents;
@@ -143,6 +145,7 @@ workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperation
 
     if (workerOperationType === workerOperationTypes.SUBTITLES) {
         torrents = messageContent.subtitlesResult.subtitlesResult;
+        log.debug("Status is " + messageContent.subtitlesResult.status);
         status = messageContent.subtitlesResult.status;
         targetState = TorrentState.COMPLETED;
         fallbackState = TorrentState.RENAMING_COMPLETED;
@@ -151,26 +154,36 @@ workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperation
     for (let torrentHash in torrents) {
         if (torrents.hasOwnProperty(torrentHash)) { // As we are iterating over object properties which include generic ones
             let torrent = {};
-            debug("Torrent hash %s", torrentHash);
-            try {
-                status = torrents[torrentHash].status;
-            } catch (err) {
-                log.warn("Error getting status",err);
+            log.info("Torrent hash %s", torrentHash);
+
+            if (!status) {
+                try {
+                    status = torrents[torrentHash].status;
+                } catch (err) {
+                    log.warn("Error getting status",err);
+                }
             }
 
             if (status && status === "failure") {
                 torrent.hash = torrentHash;
                 torrent.state = fallbackState;
-                debug("Failure detected it will fallback to %s, it will retry, error %s", fallbackState, JSON.stringify(messageContent));
+                log.warn("Failure detected it will fallback to %s, it will retry, error %s", fallbackState, JSON.stringify(messageContent));
             } else {
                 torrent.hash = torrentHash;
-                torrent.state = targetState;
+
                 if (workerOperationType === workerOperationTypes.RENAME) {
                     let torrentRenames = torrents[torrentHash];
-                    let renamedPaths = torrentRenames.map(rename => rename.renamedPath);
-                    let separatedRenamedPaths = renamedPaths.join(";");
-                    debug("Torrent %s successfully renamed, setting as RENAMING_COMPLETED, renamed paths are %s", torrentHash, separatedRenamedPaths);
-                    torrent.renamedPath = separatedRenamedPaths;
+
+                    if (torrentRenames.length == 0) {
+                        log.warn("Not found renames for torrent hash ", torrentHash,  " -- fallback to ", fallbackState);
+                        torrent.state = fallbackState;
+                    } else {
+                        let renamedPaths = torrentRenames.map(rename => rename.renamedPath);
+                        let separatedRenamedPaths = renamedPaths.join(";");
+                        log.info("Torrent %s successfully renamed, setting as RENAMING_COMPLETED, renamed paths are %s", torrentHash, separatedRenamedPaths);
+                        torrent.renamedPath = separatedRenamedPaths;
+                        torrent.state = targetState;
+                    }
                 } else {
                     let subtitledPaths = torrents[torrentHash];
 
@@ -178,18 +191,18 @@ workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperation
 
                     if (subtitledPaths) {
                         areAllSubtitled = subtitledPaths.reduce((acc, item) => {
-                            debug("Subtitled path %s - %s", item.singlePath, item.subtitleForPath);
+                            log.info("Subtitled path %s - %s", item.singlePath, item.subtitleForPath);
                             return acc && item.subtitleForPath;
                         }, true);
                     } else {
-                        debug("No subtitled paths returned %o", subtitledPaths);
+                        log,warn("No subtitled paths returned %o", subtitledPaths);
                     }
 
                     if (!areAllSubtitled) {
-                        debug("There are some paths with missing subtitles, setting back as RENAMING_COMPLETED");
+                        log.warn("There are some paths with missing subtitles, setting back as RENAMING_COMPLETED");
                         torrent.state = fallbackState;
                     } else {
-                        debug("Torrent %s got subtitles, setting as COMPLETED", torrentHash);
+                        log.info("Torrent %s got subtitles, setting as COMPLETED", torrentHash);
                     }
                 }
             }

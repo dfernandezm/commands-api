@@ -21,13 +21,13 @@ if [[ "$TVSTER_MODE" == "organizer" ]]; then
     mkdir -p /tmp/mediacentertest/Unsorted
     mkdir -p /tmp/mediacentertest/temp
     # The folder needs to be shared in File Sharing section in Docker for Mac preferences
-    VOLUMES="$VOLUMES -v /tmp/mediacentertest:/mediacenter"
+    VOLUMES="$VOLUMES -v /Users/david/mediacentertest:/mediacenter"
     echo "$VOLUMES"
 else
     PORT=4000
     DEBUG_PORT=5858
     COMMAND='bash start-debug.sh'
-    IMAGE=tvster-local-api:1.71
+    IMAGE=dfernandez/tvster:tvster-api-v1.71
     PORT_MAPPING="-p $PORT:$PORT"
 fi
 

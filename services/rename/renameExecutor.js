@@ -7,9 +7,10 @@ const debug = require("debug")("services/rename:renameExecutor");
 const Promise = require("bluebird");
 
 //TODO: does not seem to promifisy properly...
-var fs = Promise.promisifyAll(require("fs"));
+const fs = Promise.promisifyAll(require("fs"));
 const path = require("path");
 const renameExecutor = {};
+const _ = require("lodash");
 
 const pathMovedPattern = /\[MOVE\]\s+Rename\s+\[(.*)\]\s+to\s+\[(.*)\]/;
 const hashRegex = /_([\w]{40})/;
@@ -101,9 +102,7 @@ renameExecutor.startMonitoringProcess = (filebotProcess, torrents, isRenamer) =>
                         debug("Torrent hash was not found in original path %s -- skipping", originalPath);
                     }
                 }
-            } else {
-                // Subtitles, do something?
-            }
+            } // else Subtitles, do something?
         });
 
         filebotProcess.stderr.on('data', function (data) {
@@ -118,6 +117,13 @@ renameExecutor.startMonitoringProcess = (filebotProcess, torrents, isRenamer) =>
             const tvsterMessageService = require("../sqs/tvsterMessageService");
             if (isRenamer) {
                 debug("Completed Renames %o", completedRenames);
+
+                if (_.isEmpty(completedRenames)) {
+                    torrents.forEach((torrent) => {
+                        completedRenames[torrent.hash] = [];
+                    })
+                }
+
                 if (exitCodeNum !== 0) {
                     tvsterMessageService.renameCompleted({status: "failure", renamedTorrents: completedRenames});
                 } else {
@@ -138,7 +144,7 @@ renameExecutor.startMonitoringProcess = (filebotProcess, torrents, isRenamer) =>
                         tvsterMessageService.subtitlesCompleted({status: "success", subtitlesResult: validationResults});
                         debug("====== Sent subtitles completed ======");
                     }).catch(err => {
-                        debug("Error occurred %o", err);
+                        debug("Error occurred", err);
                         let torrentsMap = buildTorrentsMap(torrentsToFetchSubs, err);
                         tvsterMessageService.subtitlesCompleted({status: "failure", subtitlesResult: torrentsMap});
                     }) ;
@@ -220,14 +226,9 @@ const validateSingleTorrent = (torrent) => {
 }
 
 const existsFile = (file) => {
-    return new Promise((resolve, reject) => {
-        return fs.stat(file, (err) => {
-            if (err) {
-                return reject(false);
-            }
-            return resolve(true);
-        });
-    });
-}
+    return fs.statAsync(file)
+        .then(() => {return true})
+        .catch(() => {return false});
+};
 
 module.exports = renameExecutor;
