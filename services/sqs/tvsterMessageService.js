@@ -109,7 +109,7 @@ const handleAllResponseMessages = (message) => {
         case messageTypes.START_SUBTITLES:
             return workerOperationHandlers.handleStartWorkerResponse(message.content, workerOperationTypes.SUBTITLES);
         default:
-            debug("Message initiator not recognized: {} -- it will be ignored", message.initiator);
+            log.warn("Message initiator not recognized: {} -- it will be ignored", message.initiator);
             return {};
     }
 }
