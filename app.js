@@ -37,7 +37,7 @@ if (!utils.isWorker()) {
 const router = require('./routes')(app);
 
 // Basic error Handling
-app.use(function(err, req, res) {
+app.use(function(err, req, res, next) {
     console.log("Error ", err);
     res.status(err.status || 500);
 });

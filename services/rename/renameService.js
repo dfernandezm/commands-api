@@ -1,27 +1,41 @@
 /**
  * Created by david on 13/03/2017.
  */
+const log = require("../logger");
 const utilService = require('../utilService');
 const debug = require("debug")("services:renameService");
 const renameExecutor = require("./renameExecutor");
+const shell = require("shelljs");
 const path = require("path");
 const _ = require("lodash");
 const UNSORTED_PATH = "Unsorted";
 const renameService = {};
 
+const isFilebotRunning = () => {
+    log.debug("Checking if there is already a Filebot instance running...");
+    let value = shell.exec('ps -ef | grep "[f]ilebot"').output.toString();
+    return value.length > 0;
+};
+
 renameService.renameOrSubtitlesFromWorker = (torrents, mediacenterSettings, isRenamer) => {
     return new Promise((resolve, reject) => {
+
+        if (isFilebotRunning()) {
+            return reject({message: "There is already one Filebot process running", torrents: torrents});
+        }
+
         let taskGuid = utilService.generateGuid();
-        debug("Starting renamer from worker/organizer, GUID: ", taskGuid);
+        log.debug("Starting renamer from worker/organizer, GUID: ", taskGuid);
 
         let baseLibraryPath = mediacenterSettings.baseLibraryPath;
         let xbmcHostOrIp = mediacenterSettings.xbmcHostOrIp;
         let processingPath = mediacenterSettings.processingTempPath;
-        debug("Settings: %o", mediacenterSettings);
+        log.debug("Settings", mediacenterSettings);
 
         let runningProcess;
 
         if (isRenamer) {
+            // Build paths from torrents + Unsorted paths
             let inputPaths = generateInputPaths(torrents);
             inputPaths.push(baseLibraryPath + "/" + UNSORTED_PATH);
 
@@ -43,7 +57,7 @@ renameService.renameOrSubtitlesFromWorker = (torrents, mediacenterSettings, isRe
                 torrents: torrents,
                 renamedPaths: renamedPaths,
                 logLocation: processingPath
-            }
+            };
 
             runningProcess = renameExecutor.executeFilebotScript(subtitleFetchingParams,false);
         }
@@ -56,6 +70,7 @@ renameService.renameOrSubtitlesFromWorker = (torrents, mediacenterSettings, isRe
         // Start monitoring
         renameExecutor.startMonitoringProcess(runningProcess, torrents, isRenamer);
 
+        // Return torrent hashes being processed
         return resolve(torrents.map(torrent => torrent.hash));
     });
 }
@@ -65,7 +80,7 @@ const generateInputPaths = (torrents) => {
 }
 
 const getPathsToFetchSubtitlesIn = (torrents) => {
-    // Get folders to fetch subs in
+    // Get folders to fetch subs in, if they are multiple, get directory only
     let allPaths = torrents.map(torrent => {
        return torrent.renamedPath.split(";").map(singleRenamedPath => {
            return path.dirname(singleRenamedPath);

@@ -118,11 +118,12 @@ renameExecutor.startMonitoringProcess = (filebotProcess, torrents, isRenamer) =>
             if (isRenamer) {
                 debug("Completed Renames %o", completedRenames);
 
-                if (_.isEmpty(completedRenames)) {
-                    torrents.forEach((torrent) => {
+                // Populate hashMap with lists for all the input torrents
+                torrents.forEach((torrent) => {
+                    if (!completedRenames[torrent.hash]) {
                         completedRenames[torrent.hash] = [];
-                    })
-                }
+                    }
+                });
 
                 if (exitCodeNum !== 0) {
                     tvsterMessageService.renameCompleted({status: "failure", renamedTorrents: completedRenames});

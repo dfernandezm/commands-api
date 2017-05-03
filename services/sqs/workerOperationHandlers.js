@@ -72,7 +72,7 @@ workerOperationHandlers.handleStartWorkerRequest = (messageContent, workerOperat
     }).catch((error) => {
         statusResult = "failure";
         log.error("Error starting renamer: ", error);
-        let content = {error: error};
+        let content = {error: JSON.stringify(error), torrents: messageContent.torrents};
         return messageHandlerHelpers.sendResponse(messageType, content, statusResult);
     });
 }
@@ -80,18 +80,21 @@ workerOperationHandlers.handleStartWorkerRequest = (messageContent, workerOperat
 // API: executes this handler as a response from startRename
 workerOperationHandlers.handleStartWorkerResponse = (messageContent, workerOperationType) => {
     if (workerOperationType === workerOperationTypes.RENAME) {
-        log.info("Received response for start rename", messageContent);
+        let json = JSON.stringify(messageContent);
+        log.info("Received response for start rename: " + json);
     } else {
         log.info("Received response for start fetching subtitles", messageContent);
     }
 
     const torrentService = require("../torrentService");
+    let fallbackState = TorrentState.DOWNLOAD_COMPLETED;
     if (messageContent.result === "success") {
         let torrentsHashes = messageContent.renamingTorrentsHashes;
         let successOperation = torrentService.setTorrentAsRenaming;
         if (workerOperationType === workerOperationTypes.SUBTITLES) {
             torrentsHashes = messageContent.fetchingSubtitlesTorrentsHashes;
             successOperation = torrentService.setTorrentAsFetchingSubtitles;
+            fallbackState = TorrentState.RENAMING_COMPLETED;
         }
         if (torrentsHashes) {
             return Promise.map(torrentsHashes, (torrentHash) => {
@@ -104,21 +107,30 @@ workerOperationHandlers.handleStartWorkerResponse = (messageContent, workerOpera
         }
     } else {
         //failure
-        log.warn("Error starting process, torrents will be left untouched", JSON.stringify(messageContent.error));
+        log.warn("Error starting process, torrents will be left untouched", messageContent);
+        messageContent.torrents.forEach((torrent) => {
+            torrent.state = fallbackState;
+            torrentService.updateTorrent(torrent);
+        });
     }
 }
 
 const handleUpdatedTorrentsInApi = (torrent, workerOperationType, torrentService) => {
     return () => {
+
         if (torrent.state === TorrentState.RENAMING_COMPLETED && workerOperationType === workerOperationTypes.RENAME) {
             log.debug("Clearing RENAMING_COMPLETED torrent %s from tranmission");
             torrentService.cancelTorrentInTransmission(torrent.hash);
+            torrentService.startSubtitlesIfNotInProgress();
         }
 
+        // Either rename or subtitles processes failed (went to fallback state)
         if (torrent.state === TorrentState.RENAMING_COMPLETED && workerOperationType === workerOperationTypes.SUBTITLES ||
             torrent.state === TorrentState.DOWNLOAD_COMPLETED && workerOperationType === workerOperationTypes.RENAME) {
             // Subtitles are missing or incomplete or rename failed, to avoid continuous retry we cancel the poller
             torrentService.stopRenameAndSubtitlesInterval();
+
+            // Continue requesting status
             torrentService.getCurrentStatus();
         }
     }
@@ -195,7 +207,7 @@ workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperation
                             return acc && item.subtitleForPath;
                         }, true);
                     } else {
-                        log,warn("No subtitled paths returned %o", subtitledPaths);
+                        log.warn("No subtitled paths returned %o", subtitledPaths);
                     }
 
                     if (!areAllSubtitled) {
@@ -203,6 +215,7 @@ workerOperationHandlers.handleWorkerCompleted = (messageContent, workerOperation
                         torrent.state = fallbackState;
                     } else {
                         log.info("Torrent %s got subtitles, setting as COMPLETED", torrentHash);
+                        torrent.state = targetState;
                     }
                 }
             }

@@ -37,10 +37,6 @@ torrentService.getCurrentStatus = function () {
     lowerMoment.subtract(2, 'weeks');
     let lowerDate = lowerMoment.toDate();
 
-    if (!isRenameCheckCancelled()) {
-        utilService.startNewInterval("renameCheck", renameCheck, 5000);
-    }
-
     // select t from torrent
     // where (dateStarted is not null and dateStarted between :lower and :upper)
     // or state != 'COMPLETED'
@@ -434,7 +430,7 @@ const renameCheck = () => {
     log.debug("Running renameCheck... ");
     return torrentService.findTorrentsWithState(TorrentState.RENAMING)
         .then(startRenamer);
-}
+};
 
 const startRenamer = (renamingTorrents) => {
     if (renamingTorrents == null || renamingTorrents.length == 0) {

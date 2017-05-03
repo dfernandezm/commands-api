@@ -3,15 +3,25 @@ log4js.configure({
     "appenders": [
         {
             "type": "file",
-            "level": "DEBUG",
+            "level": "ALL",
             "filename": "/mediacenter/temp/tvster.log",
-            "maxLogSize": 4096,
+            "maxLogSize": 2096000,
             "backups": 3,
             "pollInterval": 15,
             "category": "tvster_api",
             layout: {
                 type: 'pattern',
-                pattern: "%d{ABSOLUTE} [%[%5.5p%]] - %m%n"
+                pattern: "[%[%d{ISO8601_WITH_TZ_OFFSET}] [%p %x{ln}%]] %] - %m%n",
+                tokens: {
+                    ln : function() {
+                        // The caller:
+                        return (new Error).stack.split("\n")[11]
+                        // Just the namespace, filename, line:
+                            .replace(/^\s+at\s+(\S+)\s\((.+?)([^\/]+):(\d+):\d+\)$/, function (){
+                                return arguments[3] +':'+ arguments[4];
+                            });
+                    }
+                }
             }
         },
         {

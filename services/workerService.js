@@ -1,7 +1,7 @@
 /**
  * Created by david on 02/03/2017.
  */
-const debug = require("debug")("services:worker");
+const log = require('./logger');
 const transmissionService = require("./transmissionService");
 const renameService = require("./rename/renameService");
 const workerService = {};
@@ -29,17 +29,17 @@ workerService.getStatus = () => {
 }
 
 workerService.startRename = (torrents, mediacenterSettings) => {
-    debug("MediacenterSettings", mediacenterSettings);
+    log.debug("MediacenterSettings", mediacenterSettings);
     return renameService.renameOrSubtitlesFromWorker(torrents, mediacenterSettings, true).catch((err) => {
-        debug("Error is ", err);
+        log.error("Error is ", err);
         throw err;
     });
 }
 
 workerService.startSubtitles = (torrents, mediacenterSettings) => {
-    debug("MediacenterSettings", mediacenterSettings);
+    log.debug("MediacenterSettings", mediacenterSettings);
     return renameService.renameOrSubtitlesFromWorker(torrents, mediacenterSettings, false).catch((err) => {
-        debug("Error is ", err);
+        log.debug("Error is ", err);
         throw err;
     });
 }
