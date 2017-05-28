@@ -1,5 +1,5 @@
-var fs        = require("fs");
-var path      = require("path");
+var fs = require("fs");
+var path = require("path");
 const debug = require("debug")("models:sequelize-init");
 const log = require('../services/logger');
 var db = {};
@@ -21,11 +21,17 @@ if (!process.env.TVSTER_MODE || process.env.TVSTER_MODE !== 'organizer') {
     }
 
     config.url = "mysql://root" + passwordPart + "@" + process.env.MYSQL_URL + ":" + process.env.MYSQL_PORT + "/tvster";
+
+    if (process.env.DATABASE_URL) {
+      debug("Using Database URL from environment");
+      config.url = process.env.DATABASE_URL;
+    }
+
     debug("Database URL is", config.url);
+
     var sequelize = new Sequelize(config.url, {
         logging: log.debug.bind(log)
     });
-
 
     fs
         .readdirSync(__dirname)

@@ -10,7 +10,7 @@ WORKDIR /usr/src/app
 # Install app dependencies
 COPY package.json /usr/src/app/
 RUN npm install
-RUN npm -g nodemon
+RUN npm install -g nodemon
 
 # Bundle app source
 ARG DB_URL
