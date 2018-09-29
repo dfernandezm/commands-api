@@ -4,7 +4,7 @@ log4js.configure({
         {
             "type": "file",
             "level": "ALL",
-            "filename": "/mediacenter/temp/tvster.log",
+            "filename": "/tmp/tvster.log",
             "maxLogSize": 2096000,
             "backups": 3,
             "pollInterval": 15,

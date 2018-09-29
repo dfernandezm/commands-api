@@ -11,3 +11,4 @@ docker-osx-dev-master
 .idea/workspace.xml
 .idea/libraries/tvster_node_modules.xml
 build
+package-lock.json

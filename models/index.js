@@ -5,7 +5,7 @@ const log = require('../services/logger');
 var db = {};
 
 if (!process.env.TVSTER_MODE || process.env.TVSTER_MODE !== 'organizer') {
-
+    debug("Database Setup starting for TVSTER API");
     var cls = require('continuation-local-storage');
     var namespace = cls.createNamespace('request-local-storage');
 

@@ -16,7 +16,7 @@ RUN npm install -g nodemon
 ARG DB_URL
 COPY . /usr/src/app
 
-ENV DATABASE_URL $DB_URL
+#ENV DATABASE_URL $DB_URL
 ENV PORT=4000
 EXPOSE 4000 5858
 
